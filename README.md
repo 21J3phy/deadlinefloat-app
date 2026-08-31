@@ -4,6 +4,8 @@ A small always-on-top macOS window that shows the Google Calendar deadlines you
 actually have to do something about — today plus the next two, three or four
 calendar days.
 
+**[deadlinefloat website →](https://21j3phy.github.io/deadlinefloat/)**
+
 Native Swift and SwiftUI, no Electron. Liquid Glass on macOS 26 and later, with a
 hand-built glass fallback down to macOS 14. Sign in with Google, read-only
 access, tokens in the Keychain, and no network destination other than Google's
@@ -148,9 +150,9 @@ network.
 
 ## The Google OAuth client
 
-**Users never see this.** DeadlineFloat ships with its own OAuth client ID
-compiled in, which is why signing in is one button. This section is for whoever
-builds and releases the app.
+**Users never see this.** A released build carries its own OAuth client, which is
+why signing in is one button. This section is for whoever builds and releases the
+app.
 
 An installed application cannot avoid having a client ID — OAuth requires the app
 to identify itself — but it does not have to be a *user's* problem. Google states
@@ -166,56 +168,39 @@ enable the Calendar API, and `gcloud alpha iap oauth-clients` exists but only
 creates *Web* clients, which will not work here. It has to be done in the Cloud
 Console UI.
 
-**[`Documentation/CODEX_PROMPT.md`](Documentation/CODEX_PROMPT.md)** is a complete, self-contained
-brief you can hand to Codex or any agent with browser access: it creates the
-project, enables the API, configures the consent screen with the single
-`calendar.readonly` scope, creates the Desktop client, writes the ID into the
-source, and reports back on what verification would still require.
+**[`Documentation/CODEX_PROMPT.md`](Documentation/CODEX_PROMPT.md)** is a complete,
+self-contained brief you can hand to Codex or any agent with browser access: it
+creates the project, enables the API, configures the consent screen with the
+single `calendar.readonly` scope, creates the Desktop client, and reports back on
+what verification would still require.
 
 To do it by hand instead, follow the same document — the steps are the steps.
 
-### Where the client ID goes
+### Where the credentials live
 
-One constant, in
-[`DeadlineFloat/Services/GoogleClientConfig.swift`](DeadlineFloat/Services/GoogleClientConfig.swift):
+**Not in this repository.** `GoogleClientConfig.bundled` is deliberately empty
+here. The real client lives in `Secrets/GoogleOAuth.plist`, which is git-ignored:
 
-```swift
-static let bundled = GoogleClientConfig(
-    clientID: "…apps.googleusercontent.com",
-    clientSecret: "GOCSPX-…"
-)
+```bash
+cp Secrets/GoogleOAuth.plist.example Secrets/GoogleOAuth.plist
+# then fill in ClientID and ClientSecret
 ```
 
-**The secret is committed on purpose, and it has to be.** Google's token endpoint
-rejects this client without it — `{"error":"invalid_request","error_description":"client_secret is missing."}` —
-so a build that omits it fails for every user who does not happen to have a copy
-in their own local preferences. Google's guidance for installed apps is that this
-value "is obviously not treated as a secret", because it must be embedded in
-software the user already possesses; RFC 8252 says the same thing more formally.
-PKCE is what actually protects the flow, together with the fact that the
-authorization code is only ever delivered to a loopback listener on the user's
-own machine.
+`Tools/build_release.sh` copies that file into the built app bundle and re-signs,
+reusing the same identity and entitlements the build used — so a released build
+signs in with one button while the credentials never appear in public source.
+The script refuses to package a release if the file is missing a client ID or a
+secret.
 
-The one thing an extracted client ID and secret buy an attacker is the ability to
-put *this app's name* on their own consent screen. That is inherent to the client
-type, which is why the Cloud project's quota and verification status are
-per-project. If a pair is ever abused, delete the client in the console and create
-a new one — both values change, and a new release picks them up.
+The reason for the indirection is specific: GitHub's secret scanning detects the
+`GOCSPX-` pattern and reports it to Google, and a provider-side revocation would
+break sign-in for every copy of the app at once. Keeping it out of the tree
+removes that failure mode entirely.
 
-Two tests guard this: `GoogleClientConfigTests` fails if the client ID is not a
-real Google one, and fails again if the secret is blanked out — because that
-particular mistake keeps working on any Mac carrying a local override while
-silently breaking sign-in for everyone else.
-
-Two overrides exist for people building from source against their own Cloud
-project, in priority order above the compiled-in value:
-
-- **Settings → Account → Advanced** — takes effect immediately, no rebuild.
-- A `GoogleOAuth.plist` in the app bundle with a `ClientID` string key — for
-  repackaging without a rebuild.
-
-The Advanced section is collapsed by default and says outright that there is
-normally nothing to do there.
+**For everyday development you need none of this.** Run the app and put your own
+client into **Settings → Account → Advanced**; it takes effect immediately, with
+no rebuild. Resolution order is: that override → a `GoogleOAuth.plist` in the
+bundle → the (empty) compiled-in constant.
 
 ---
 
@@ -288,10 +273,13 @@ before it will let the app move to production:
 | Authorised domain | Must be a domain verified in [Google Search Console](https://search.google.com/search-console) |
 | App logo | `DeadlineFloat/Assets.xcassets/AppIcon.appiconset/icon_512x512.png` |
 
-The cheapest route that satisfies all four is GitHub Pages: push a repository with
-an `index.html` and `privacy.html`, enable Pages, verify the resulting
-`<user>.github.io` in Search Console with its HTML-file method, and use that
-domain. No purchase and no DNS.
+The site in [`docs/`](docs/) covers the first, second and fourth, and is already
+live at <https://21j3phy.github.io/deadlinefloat/> via GitHub Pages. What remains
+is verifying `21j3phy.github.io` in
+[Google Search Console](https://search.google.com/search-console) and filling in
+the Branding page.
+[`Documentation/PUBLISH_PROMPT.md`](Documentation/PUBLISH_PROMPT.md) is a brief
+for doing exactly that.
 
 Once published, `calendar.readonly` is one of Google's **sensitive** scopes, so an
 unverified-but-published app still works while being capped at **100 users** and

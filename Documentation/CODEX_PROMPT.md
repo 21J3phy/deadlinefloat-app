@@ -4,9 +4,10 @@
 > `deadlinefloat-507123`, Desktop client "DeadlineFloat macOS", scope
 > `calendar.readonly` (sensitive), consent screen still in **Testing** because
 > the Branding page needs a homepage, privacy policy URL, verified domain and
-> logo. The client ID *and* its secret are in
-> `DeadlineFloat/Services/GoogleClientConfig.swift` — that client's token
-> endpoint rejects requests without the secret, so both must ship.
+> logo. The client ID *and* its secret live in `Secrets/GoogleOAuth.plist`, which
+> is git-ignored — that client's token endpoint rejects requests without the
+> secret, so both must reach the shipped bundle, and `Tools/build_release.sh`
+> injects them at package time.
 >
 > Kept here because it is the procedure for rotating the credentials or standing
 > the app up in a different Google account.
@@ -51,7 +52,8 @@ The Google account to use is **niravsurabhi@gmail.com**.
   a machine that happens to hold a local copy, and fails for every other user.
   Google's guidance for installed apps is that this value is not treated as a
   secret, because it has to ship inside software the user already has.
-- **Change nothing else in the repository** beyond the one constant named below.
+- **Change nothing else in the repository** beyond creating the ignored
+  `Secrets/GoogleOAuth.plist` named below.
 - If any step needs a decision you cannot make (a domain name, a paid plan,
   accepting new terms), stop and report rather than guessing.
 
@@ -159,44 +161,42 @@ curl -s -X POST https://oauth2.googleapis.com/token \
   is required.** Re-run the same command with `-d client_secret=<SECRET>` and
   confirm the answer changes to `invalid_grant`.
 
-## Step 7 — Put the client ID in the source
+## Step 7 — Put the credentials where the build will find them
 
-Edit exactly one line, in
-`/Users/nrav/Documents/DeadlineFloat/DeadlineFloat/Services/GoogleClientConfig.swift`.
+They do **not** go in the Swift source. `GoogleClientConfig.bundled` stays empty
+so that GitHub's secret scanning has nothing to report to Google — a
+provider-side revocation would break sign-in for every copy of the app at once.
 
-Find:
-
-```swift
-static let bundled = GoogleClientConfig(clientID: "", clientSecret: nil)
-```
-
-Replace it with the values from Steps 6 and 6a:
-
-```swift
-static let bundled = GoogleClientConfig(
-    clientID: "PASTE_THE_CLIENT_ID_HERE.apps.googleusercontent.com",
-    clientSecret: "PASTE_THE_SECRET_HERE"   // or nil, if Step 6a said it is not needed
-)
-```
-
-If Step 6a showed the secret is required, it goes here. `GoogleClientConfigTests`
-enforces that: it fails if a configured client has no secret, because that
-mistake keeps working on a machine holding a local override while breaking
-sign-in for everyone else.
-
-Then verify, from the repository root:
+Instead, from the repository root:
 
 ```bash
-xcodebuild -project DeadlineFloat.xcodeproj -scheme DeadlineFloat \
-  -configuration Debug -derivedDataPath .build/DerivedData test
+cp Secrets/GoogleOAuth.plist.example Secrets/GoogleOAuth.plist
+/usr/libexec/PlistBuddy -c "Set :ClientID <CLIENT_ID>" Secrets/GoogleOAuth.plist
+/usr/libexec/PlistBuddy -c "Set :ClientSecret <CLIENT_SECRET>" Secrets/GoogleOAuth.plist
+plutil -lint Secrets/GoogleOAuth.plist
 ```
 
-It must report **0 failures** and the build must have **no warnings**. There is a
-test, `GoogleClientConfigTests.testTheBundledClientIsEitherEmptyOrWellFormed`,
-that fails if the pasted value is not a real Google client ID — if it fails, you
-pasted the wrong string (a project number or an API key, most likely) — and
-`testTheBundledClientCarriesTheSecretItsTokenEndpointRequires`, which fails if a
-required secret is missing.
+`Secrets/` is git-ignored apart from the `.example`. Confirm that before going
+further — this is the one step where a mistake ends up public:
+
+```bash
+git status --porcelain --ignored | grep Secrets
+git ls-files Secrets            # must list only GoogleOAuth.plist.example
+```
+
+`Tools/build_release.sh` copies the plist into the app bundle and re-signs, which
+is what makes a released build sign in with one button. If Step 6a found the
+secret is *not* required, leave `ClientSecret` empty — the script will reject the
+build, so set it to the issued value either way if one exists.
+
+Then verify:
+
+```bash
+Tools/run_tests.sh
+```
+
+Expect **0 failures** and no warnings. Two tests skip when no client is compiled
+in; that is correct and expected.
 
 ## Step 8 — Sanity-check the live flow
 
@@ -233,8 +233,8 @@ Give me, in plain text:
    or new "Google Auth Platform").
 2. The **client ID** you created.
 3. The **client secret**, if one was issued, and the result of the Step 6a probe
-   — whether the token endpoint requires it, and therefore whether you embedded
-   it.
+   — whether the token endpoint requires it. Confirm that `git ls-files Secrets`
+   lists only the `.example`.
 4. **Publishing status** — Testing or In production — and, if you could not
    publish, exactly what blocked it.
 5. Whether the live sign-in in Step 8 worked, and what the consent screen listed
@@ -247,6 +247,6 @@ Give me, in plain text:
    classified as *sensitive* (verification only) or *restricted* (verification
    plus an independent security assessment) — this determines how much work
    publishing to a wide audience actually is.
-7. Anything you changed that was not listed in Step 7.
+7. Anything you changed outside `Secrets/`.
 
 ---
