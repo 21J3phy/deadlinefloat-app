@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — DeadlineFloat</title>
+<meta name="description" content="What DeadlineFloat does with your data: one read-only Google Calendar scope, everything stored on your Mac, nothing sent anywhere but Google.">
+<link rel="icon" href="favicon.png" type="image/png">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f4f8; --card: rgba(255,255,255,.62); --rim: rgba(255,255,255,.85);
+    --ink: #16161c; --ink-2: #55555f; --ink-3: #85858f;
+    --accent: #6a4ee6; --hairline: rgba(0,0,0,.09);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0d13; --card: rgba(255,255,255,.055); --rim: rgba(255,255,255,.16);
+      --ink: #f2f2f6; --ink-2: #b0b0bc; --ink-3: #77777f;
+      --accent: #9b83ff; --hairline: rgba(255,255,255,.09);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 400 17px/1.68 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.011em;
+  }
+  .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+  .aurora span { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .38; }
+  .aurora span:nth-child(1) { width: 40vw; height: 40vw; left: -14vw; top: -16vw; background: #6a4ee6; }
+  .aurora span:nth-child(2) { width: 34vw; height: 34vw; right: -12vw; bottom: -12vw; background: #35c7b8; opacity: .26; }
+
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px 80px; }
+  header { padding: 64px 0 26px; }
+  .back { font-size: .9rem; color: var(--ink-3); display: inline-block; margin-bottom: 26px; }
+  h1 { font-size: clamp(1.9rem, 5vw, 2.5rem); letter-spacing: -0.03em; margin: 0 0 8px; font-weight: 700; }
+  .updated { color: var(--ink-3); font-size: .9rem; margin: 0; }
+
+  h2 { font-size: 1.16rem; letter-spacing: -0.017em; margin: 42px 0 10px; font-weight: 650; }
+  p, li { color: var(--ink-2); }
+  p { margin: 0 0 14px; }
+  ul { padding-left: 20px; margin: 0 0 14px; }
+  li { margin-bottom: 8px; }
+  strong { color: var(--ink); font-weight: 600; }
+
+  .lead {
+    background: var(--card); border: 1px solid var(--rim); border-radius: 16px; padding: 22px 24px;
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); margin: 26px 0 0;
+  }
+  .lead p:last-child { margin-bottom: 0; }
+
+  code {
+    font: 500 .85em/1 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    background: var(--card); border: 1px solid var(--rim); border-radius: 6px; padding: 2px 6px;
+    overflow-wrap: anywhere;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; font-size: .93rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  th { color: var(--ink); font-weight: 600; }
+  td { color: var(--ink-2); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer { border-top: 1px solid var(--hairline); margin-top: 48px; padding-top: 26px; color: var(--ink-3); font-size: .88rem; }
+</style>
+</head>
+<body>
+
+<div class="aurora"><span></span><span></span></div>
+
+<div class="wrap">
+  <header>
+    <a class="back" href="index.html">← DeadlineFloat</a>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated 30 August 2026</p>
+  </header>
+
+  <div class="lead">
+    <p><strong>The short version.</strong> DeadlineFloat runs entirely on your Mac. It reads your
+    calendars from Google and displays them. It sends nothing anywhere else. There is no server,
+    no account, no analytics and no telemetry.</p>
+  </div>
+
+  <h2>What it accesses</h2>
+  <p>DeadlineFloat requests a single Google OAuth scope:</p>
+  <p><code>https://www.googleapis.com/auth/calendar.readonly</code></p>
+  <p>Google describes this as <em>“See and download any calendar you can access using your Google
+  Calendar.”</em> It grants read access only. It does not permit creating, modifying or deleting
+  calendars or events, and DeadlineFloat additionally enforces this in its own code: every request
+  it makes to the Google Calendar API must be an HTTP <code>GET</code>, and any other method is
+  rejected before the request leaves your Mac.</p>
+  <p>No other scope is requested. DeadlineFloat does not ask for your name, email address, profile,
+  contacts, or any other Google service.</p>
+  <p>From the Calendar API it reads:</p>
+  <ul>
+    <li>your calendar list — names, colours and access roles, so it can show which calendar an item
+    belongs to and let you choose which to include;</li>
+    <li>events in a window of today plus two to four days, in the calendars you have chosen —
+    titles, times, locations, conference links, colours and recurrence information;</li>
+    <li>Google's colour palette, so items are drawn in the same colours as Google Calendar.</li>
+  </ul>
+  <p>Calendars you have not ticked in Settings are never requested, so their events never leave
+  Google.</p>
+
+  <h2>Where your data goes</h2>
+  <p>Nowhere but Google.</p>
+  <p>DeadlineFloat's network layer enforces an allowlist of exactly two hosts —
+  <code>oauth2.googleapis.com</code> and <code>www.googleapis.com</code> — and refuses any request
+  to any other host. There is no analytics endpoint, error-reporting endpoint or usage endpoint to
+  disable, because none could be reached.</p>
+
+  <h2>Where your data is stored</h2>
+  <p>All on your Mac, inside the application's own sandbox container.</p>
+  <table>
+    <tr><th>What</th><th>Where</th></tr>
+    <tr><td>OAuth access and refresh tokens</td><td>macOS Keychain, as a single generic-password item under the app's bundle identifier</td></tr>
+    <tr><td>The most recent calendar fetch</td><td><code>Application Support/DeadlineFloat/snapshot.json</code> — kept so the window has content the moment it opens and continues to work offline</td></tr>
+    <tr><td>Your settings</td><td>the application's preferences file</td></tr>
+  </table>
+  <p>Nothing is uploaded, backed up to a service, or shared between devices by DeadlineFloat. If
+  your Mac has iCloud Keychain enabled, macOS itself may sync the Keychain item; that is a system
+  feature, not something the app does.</p>
+
+  <h2>Logging</h2>
+  <p>DeadlineFloat writes diagnostic messages to the standard macOS unified log — counts, HTTP
+  status codes and sync outcomes. Event titles, locations, calendar names and attendees are
+  deliberately excluded. These logs stay on your Mac.</p>
+
+  <h2>Deleting your data</h2>
+  <ul>
+    <li><strong>Settings → Account → Disconnect</strong> revokes the token with Google and deletes
+    the stored tokens and the local cache.</li>
+    <li>Dragging the app to the Trash and deleting
+    <code>~/Library/Containers/com.niravsurabhi.DeadlineFloat</code> removes everything else.</li>
+    <li>You can revoke DeadlineFloat's access at any time, independently of the app, at
+    <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>DeadlineFloat is not directed at children under 13 and collects no data from anyone.</p>
+
+  <h2>Changes</h2>
+  <p>Any change to this policy will be published at this URL with an updated date.</p>
+
+  <h2>Contact</h2>
+  <p><a href="mailto:niravsurabhi@gmail.com">niravsurabhi@gmail.com</a></p>
+
+  <footer>DeadlineFloat · <a href="index.html">Home</a></footer>
+</div>
+
+</body>
+</html>

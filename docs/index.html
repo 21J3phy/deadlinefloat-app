@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeadlineFloat — your deadlines, always in view</title>
+<meta name="description" content="A small always-on-top macOS window that shows your upcoming Google Calendar deadlines. Native SwiftUI, read-only access, nothing leaves your Mac.">
+<link rel="icon" href="favicon.png" type="image/png">
+<meta property="og:title" content="DeadlineFloat">
+<meta property="og:description" content="A small always-on-top macOS window that shows your upcoming Google Calendar deadlines.">
+<meta property="og:image" content="screenshots/dark.png">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f4f8;
+    --bg-2: #e9e9f2;
+    --card: rgba(255,255,255,.62);
+    --rim: rgba(255,255,255,.85);
+    --ink: #16161c;
+    --ink-2: #55555f;
+    --ink-3: #85858f;
+    --accent: #6a4ee6;
+    --hairline: rgba(0,0,0,.09);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0d13;
+      --bg-2: #16121f;
+      --card: rgba(255,255,255,.055);
+      --rim: rgba(255,255,255,.16);
+      --ink: #f2f2f6;
+      --ink-2: #b0b0bc;
+      --ink-3: #77777f;
+      --accent: #9b83ff;
+      --hairline: rgba(255,255,255,.09);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.011em;
+    overflow-x: hidden;
+  }
+
+  /* Ambient wash behind everything, echoing the app's glass. */
+  .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+  .aurora span {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5;
+  }
+  .aurora span:nth-child(1) { width: 46vw; height: 46vw; left: -12vw; top: -14vw; background: #6a4ee6; }
+  .aurora span:nth-child(2) { width: 38vw; height: 38vw; right: -10vw; top: 8vw; background: #e64e93; opacity: .38; }
+  .aurora span:nth-child(3) { width: 42vw; height: 42vw; left: 22vw; bottom: -20vw; background: #35c7b8; opacity: .32; }
+
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+  header { padding: 92px 0 8px; text-align: center; }
+  .icon {
+    width: 116px; height: 116px; border-radius: 26px; display: block; margin: 0 auto 26px;
+    box-shadow: 0 22px 60px rgba(40,20,90,.34);
+  }
+  h1 { font-size: clamp(2.4rem, 6vw, 3.4rem); line-height: 1.08; margin: 0 0 14px; letter-spacing: -0.035em; font-weight: 700; }
+  .tagline { font-size: clamp(1.05rem, 2.4vw, 1.28rem); color: var(--ink-2); margin: 0 auto 30px; max-width: 34ch; }
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .badge {
+    font-size: .82rem; font-weight: 500; color: var(--ink-2);
+    padding: 6px 13px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--rim);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+
+  .shot { margin: 54px 0 0; }
+  .shot img {
+    width: 100%; height: auto; display: block; border-radius: 20px;
+    box-shadow: 0 30px 80px rgba(20,10,50,.30);
+  }
+
+  section { padding: 64px 0; }
+  h2 { font-size: 1.5rem; letter-spacing: -0.02em; margin: 0 0 10px; font-weight: 650; }
+  .lede { color: var(--ink-2); max-width: 62ch; margin: 0 0 30px; }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--rim); border-radius: 17px; padding: 22px;
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  }
+  .card h3 { margin: 0 0 7px; font-size: 1rem; font-weight: 620; letter-spacing: -0.012em; }
+  .card p { margin: 0; color: var(--ink-2); font-size: .93rem; line-height: 1.55; }
+
+  .gallery { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .gallery figure { margin: 0; }
+  .gallery img { width: 100%; height: auto; border-radius: 15px; display: block; box-shadow: 0 16px 44px rgba(20,10,50,.24); }
+  .gallery figcaption { font-size: .8rem; color: var(--ink-3); text-align: center; margin-top: 10px; }
+
+  .privacy { border-left: 3px solid var(--accent); padding-left: 20px; }
+  .privacy ul { margin: 0; padding-left: 18px; color: var(--ink-2); }
+  .privacy li { margin-bottom: 9px; font-size: .95rem; }
+  code {
+    font: 500 .86em/1 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    background: var(--card); border: 1px solid var(--rim); border-radius: 6px; padding: 2px 6px;
+  }
+
+  footer {
+    border-top: 1px solid var(--hairline); margin-top: 40px;
+    padding: 34px 0 64px; color: var(--ink-3); font-size: .88rem;
+    display: flex; gap: 20px; flex-wrap: wrap; justify-content: space-between;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer nav { display: flex; gap: 20px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<div class="aurora"><span></span><span></span><span></span></div>
+
+<div class="wrap">
+  <header>
+    <img class="icon" src="icon.png" alt="DeadlineFloat app icon">
+    <h1>Your deadlines,<br>always in view</h1>
+    <p class="tagline">A small always-on-top window for the Google Calendar events you actually have to do something about.</p>
+    <div class="badges">
+      <span class="badge">macOS 14+</span>
+      <span class="badge">Native SwiftUI</span>
+      <span class="badge">Liquid Glass</span>
+      <span class="badge">Read-only calendar access</span>
+    </div>
+    <div class="shot">
+      <img src="screenshots/dark.png" alt="The DeadlineFloat window showing overdue, today and tomorrow sections over a desktop">
+    </div>
+  </header>
+
+  <section>
+    <h2>What it does</h2>
+    <p class="lede">
+      DeadlineFloat sits above your other windows and follows you between Spaces, showing
+      today plus the next two, three or four calendar days — grouped into Overdue, Today,
+      Tomorrow, and then by weekday.
+    </p>
+    <div class="grid">
+      <div class="card">
+        <h3>Only the things that are due</h3>
+        <p>Events whose titles start with <code>DUE</code> or <code>SUBMIT</code>, or contain <code>due</code> or <code>deadline</code>. Every keyword is editable, and <code>DONE</code> or <code>CANCELLED</code> items stay hidden.</p>
+      </div>
+      <div class="card">
+        <h3>Real countdowns</h3>
+        <p>“2h 14m left”, updated continuously. All-day events say <em>All day</em> rather than inventing a time, and only go overdue once the day is actually over.</p>
+      </div>
+      <div class="card">
+        <h3>Your Google colours</h3>
+        <p>Exactly the colour Google reports, per event or per calendar. Urgency shows up as an icon, a border and the countdown — never by overwriting the colour you chose.</p>
+      </div>
+      <div class="card">
+        <h3>Never in the way</h3>
+        <p>A non-activating panel: clicking it never steals focus from what you are working in. Drag it anywhere; it remembers where. Adjustable text size and opacity, plus a compact mode.</p>
+      </div>
+      <div class="card">
+        <h3>Correct at the edges</h3>
+        <p>Daylight saving, midnight versus noon, recurring series, multi-day all-day events, duplicates across calendars, offline, and Google's rate limits — all handled and covered by tests.</p>
+      </div>
+      <div class="card">
+        <h3>Out of the way</h3>
+        <p>Lives in the menu bar, no Dock icon. Refreshes every five minutes, on wake from sleep, and whenever the day or time zone changes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Light, dark, compact</h2>
+    <p class="lede">Liquid Glass on macOS 26 and later; a hand-built glass fallback down to macOS 14.</p>
+    <div class="gallery">
+      <figure><img src="screenshots/light.png" alt="DeadlineFloat in light mode"><figcaption>Light</figcaption></figure>
+      <figure><img src="screenshots/compact.png" alt="DeadlineFloat in compact mode"><figcaption>Compact — title, time, colour</figcaption></figure>
+      <figure><img src="screenshots/welcome.png" alt="The DeadlineFloat sign-in screen"><figcaption>Setup is one button</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>What it can see</h2>
+    <div class="privacy">
+      <ul>
+        <li>One Google scope: <code>calendar.readonly</code>. No profile, no email, no other service.</li>
+        <li>Read-only by construction — every Calendar API request must be a <code>GET</code>, enforced in code, so the app cannot create, change or delete an event.</li>
+        <li>Two reachable hosts, both Google's. Every other host is refused before a request leaves your Mac.</li>
+        <li>Tokens live in the macOS Keychain. Calendar data is cached only inside the app's own sandbox container, so the window works offline.</li>
+        <li>No analytics, no telemetry, no crash reporting, no server.</li>
+      </ul>
+      <p style="margin-top:18px"><a href="privacy.html">Read the full privacy policy →</a></p>
+    </div>
+  </section>
+
+  <footer>
+    <span>DeadlineFloat</span>
+    <nav>
+      <a href="privacy.html">Privacy</a>
+      <a href="mailto:niravsurabhi@gmail.com">Contact</a>
+    </nav>
+  </footer>
+</div>
+
+</body>
+</html>

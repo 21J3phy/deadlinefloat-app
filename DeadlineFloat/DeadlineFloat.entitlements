@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- DeadlineFloat runs inside the App Sandbox. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- Outgoing HTTPS to Google's OAuth and Calendar endpoints. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!--
+	  A short-lived listener on 127.0.0.1 that receives Google's OAuth redirect
+	  during sign-in. It binds an ephemeral loopback port and closes as soon as
+	  the authorization code arrives.
+	-->
+	<key>com.apple.security.network.server</key>
+	<true/>
+</dict>
+</plist>
