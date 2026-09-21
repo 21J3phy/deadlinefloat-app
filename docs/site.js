@@ -201,7 +201,7 @@
   const LEFT = 300, GUTTER = 46, HEAD = 58;
 
   function createPanel(host, options = {}) {
-    const opts = Object.assign({ range: 1, open: false, theme: 'dark', edge: 'right', compact: false }, options);
+    const opts = Object.assign({ range: 1, open: false }, options);
 
     const root = el('div', 'df');
     root.innerHTML = `
@@ -502,16 +502,6 @@
 
     /* ---- controls */
 
-    root.querySelectorAll('.df-seg button').forEach(b =>
-      b.addEventListener('click', () => api.setRange(Number(b.dataset.range))));
-
-    root.querySelector('[data-act="sync"]').addEventListener('click', e => {
-      const svg = e.currentTarget.querySelector('svg');
-      svg.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
-        { duration: 620, easing: 'cubic-bezier(.4,0,.2,1)' });
-      render();
-    });
-
     const api = {
       root,
       render,
@@ -535,9 +525,6 @@
         root.classList.toggle('is-open', v);
         host.dispatchEvent(new CustomEvent('df:open', { detail: v }));
       },
-      setTheme(t) { root.classList.toggle('df--light', t === 'light'); },
-      setEdge(e) { root.classList.toggle('df--left', e === 'left'); },
-      setCompact(v) { root.classList.toggle('df--compact', v); },
       reset() { done.clear(); render(); },
       sweep() {
         const row = root.querySelector('.df-row:not([data-overdue])');
@@ -546,8 +533,6 @@
     };
 
     root.classList.toggle('is-open', open);
-    if (opts.theme === 'light') root.classList.add('df--light');
-    if (opts.edge === 'left') root.classList.add('df--left');
     render();
     return api;
   }
@@ -578,32 +563,6 @@
     stage.addEventListener('df:open', e => {
       if (hg) hg.classList.toggle('is-pulsing', !e.detail);
     });
-
-    // controls beneath the screen
-    document.querySelectorAll('[data-ctl-range]').forEach(b =>
-      b.addEventListener('click', () => { demo.setOpen(true); demo.setRange(Number(b.dataset.ctlRange)); }));
-    stage.addEventListener('df:range', () => {
-      document.querySelectorAll('[data-ctl-range]').forEach(b =>
-        b.setAttribute('aria-pressed', String(Number(b.dataset.ctlRange) === demo.range)));
-    });
-
-    document.querySelectorAll('[data-ctl-theme]').forEach(b => b.addEventListener('click', () => {
-      document.querySelectorAll('[data-ctl-theme]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-      demo.setTheme(b.dataset.ctlTheme);
-      document.querySelector('.mac-screen').classList.toggle('is-light', b.dataset.ctlTheme === 'light');
-    }));
-
-    document.querySelectorAll('[data-ctl-edge]').forEach(b => b.addEventListener('click', () => {
-      document.querySelectorAll('[data-ctl-edge]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-      demo.setEdge(b.dataset.ctlEdge);
-    }));
-
-    document.querySelectorAll('[data-ctl-compact]').forEach(b => b.addEventListener('click', () => {
-      const on = b.getAttribute('aria-pressed') !== 'true';
-      b.setAttribute('aria-pressed', String(on));
-      demo.setOpen(true);
-      demo.setCompact(on);
-    }));
   }
 
   /* ------------------------------------------------ the edge of the page */
@@ -676,72 +635,85 @@
     io.observe(n);
   });
 
-  // the story steps drive the demo
+  /* ---- the story steps drive the demo
+   *
+   * Whichever step's middle is nearest the middle of the viewport is the
+   * active one, recomputed from geometry on every scroll frame rather than
+   * from IntersectionObserver edges. Edges get missed on a fast flick or a
+   * restored scroll position, and a missed edge leaves the panel showing the
+   * wrong thing for the step you are actually reading; this cannot drift.
+   */
   const steps = [...document.querySelectorAll('.step')];
+  let syncSteps = () => {};
+
   if (steps.length && demo) {
+    let swept = false;
     const acts = [
-      () => { demo.setOpen(false); demo.setRange(1); },
+      // at rest: a twelve-point sliver with the now-pill beside it
+      () => { demo.reset(); swept = false; demo.setOpen(false); demo.setRange(1); },
+      // open: the sliver stretches sideways into today's column
       () => { demo.setOpen(true); demo.setRange(1); },
+      // the week: the bar widens and the calendar grows columns
       () => { demo.setOpen(true); demo.setRange(7); },
+      // done: back to one day, then swipe the first deadline away
       () => {
         demo.setOpen(true);
         demo.setRange(1);
-        // only ever demonstrate the swipe once per pass; scrolling back to the
-        // first step resets the list
-        if (!swept) { swept = true; window.setTimeout(() => demo.sweep(), 700); }
+        if (!swept) { swept = true; window.setTimeout(() => demo.sweep(), 820); }
       }
     ];
-    let swept = false;
+
     let active = -1;
-    const stepIO = new IntersectionObserver(entries => {
-      entries.forEach(en => {
-        if (!en.isIntersecting) return;
-        const i = steps.indexOf(en.target);
-        if (i === active) return;
-        steps.forEach((s, j) => s.classList.toggle('is-active', j === i));
-        active = i;
-        if (i === 0) { demo.reset(); swept = false; }
-        acts[i] && acts[i]();
+    syncSteps = () => {
+      const mid = window.innerHeight / 2;
+      let best = 0, bestDistance = Infinity;
+      steps.forEach((step, i) => {
+        const r = step.getBoundingClientRect();
+        const d = Math.abs(r.top + r.height / 2 - mid);
+        if (d < bestDistance) { bestDistance = d; best = i; }
       });
-    }, { rootMargin: '-45% 0px -45% 0px' });
-    steps.forEach(s => stepIO.observe(s));
-    steps[0].classList.add('is-active');
+      if (best === active) return;
+      active = best;
+      steps.forEach((step, i) => step.classList.toggle('is-active', i === best));
+      acts[best]();
+    };
   }
 
-  // nav
   const nav = document.querySelector('.nav');
-  // parallax
-  const heroShot = document.querySelector('.hero-shot img');
-  const floats = [...document.querySelectorAll('[data-float]')];
+  const finale = document.querySelector('.finale');
 
+  function update() {
+    if (nav) nav.classList.toggle('is-stuck', window.scrollY > 20);
+    syncSteps();
+
+    // the download button grows as you scroll the finale under its pin
+    if (finale && !reduced) {
+      const r = finale.getBoundingClientRect();
+      const travel = r.height - window.innerHeight;
+      const p = travel > 0 ? Math.min(1, Math.max(0, -r.top / travel)) : 1;
+      // most of the growth happens early, so it has settled by the time it is
+      // centred and there is a beat of stillness before the page ends
+      finale.style.setProperty('--z', Math.min(1, p / .7).toFixed(3));
+    }
+  }
+
+  // rAF-gate the scroll handler, but never let the gate latch: a tab that is
+  // backgrounded mid-scroll stops servicing requestAnimationFrame, and a gate
+  // that is still closed when it comes back would freeze the whole page.
   let ticking = false;
   function onScroll() {
     if (ticking) return;
     ticking = true;
-    requestAnimationFrame(() => {
-      const y = window.scrollY;
-      if (nav) nav.classList.toggle('is-stuck', y > 20);
-
-      if (!reduced) {
-        if (heroShot) {
-          const vh = window.innerHeight;
-          const r = heroShot.getBoundingClientRect();
-          const p = Math.min(1, Math.max(0, 1 - (r.top - vh * .18) / (vh * .9)));
-          heroShot.style.transform =
-            `perspective(1600px) rotateX(${(1 - p) * 9}deg) translateY(${(1 - p) * 42}px) scale(${.94 + p * .06})`;
-        }
-        floats.forEach(n => {
-          const r = n.getBoundingClientRect();
-          const mid = (r.top + r.height / 2 - window.innerHeight / 2) / window.innerHeight;
-          n.style.transform = `translateY(${(-mid * Number(n.dataset.float || 22)).toFixed(2)}px)`;
-        });
-      }
-      ticking = false;
-    });
+    requestAnimationFrame(() => { ticking = false; update(); });
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll, { passive: true });
-  onScroll();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    ticking = false;
+    update();
+  });
+  update();
 
   /* ---------------------------------------- keep every CTA on one version */
 

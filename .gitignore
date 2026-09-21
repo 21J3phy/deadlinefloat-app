@@ -8,3 +8,5 @@ xcuserdata/
 # Real OAuth credentials. Never committed — see Secrets/GoogleOAuth.plist.example.
 Secrets/*
 !Secrets/*.example
+.vercel
+.env*
