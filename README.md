@@ -4,7 +4,10 @@ A bar down the edge of your Mac's screen, and an hourglass in the menu bar, for
 the Google Calendar deadlines you actually have to do something about — what is
 due today and when, what your day looks like, and the days after.
 
-**[deadlinefloat website →](https://21j3phy.github.io/deadlinefloat/)**
+**[Download DeadlineFloat 1.0 →](https://github.com/21J3phy/deadlinefloat/releases/latest)**  ·  [website](https://21j3phy.github.io/deadlinefloat/)
+
+Signed with a Developer ID certificate, notarised by Apple and stapled, so it
+opens on any Mac running macOS 14 or later without a Gatekeeper warning.
 
 Native Swift and SwiftUI, no Electron. Liquid Glass on macOS 26 and later, with a
 hand-built glass fallback down to macOS 14. At rest the bar is a 12-point sliver
@@ -275,16 +278,44 @@ bundle → the (empty) compiled-in constant.
 ## Build a signed `.app`
 
 ```bash
-Tools/build_release.sh
+Tools/build_release.sh            # build, sign, notarise, staple, package
+Tools/build_release.sh --no-notarize   # skip the round trip to Apple
+Tools/build_release.sh --no-dmg        # zip only
 ```
 
-That produces `build/Release/DeadlineFloat.app` and `build/DeadlineFloat.zip`,
-verifies the signature, and prints it. The release build is a universal binary
-(arm64 + x86_64), hardened-runtime, sandboxed, and holds three entitlements:
-`app-sandbox`, `network.client` (Google's HTTPS endpoints) and `network.server`
-(the loopback listener used for the few seconds of the OAuth redirect).
+One command takes the source to something a stranger can download and open. It
 
-To sign with a different identity:
+1. builds Release as a universal binary (arm64 + x86_64), signed with the
+   **Developer ID Application** certificate it finds in the keychain;
+2. copies `Secrets/GoogleOAuth.plist` into the bundle and re-signs, from the
+   checked-in entitlements file rather than the `.xcent` the build leaves
+   behind — see below;
+3. checks the signature has the hardened runtime, a secure timestamp and no
+   `get-task-allow`, and refuses to continue if any of those is wrong;
+4. zips it, notarises it, staples the ticket, and rebuilds the zip from the
+   stapled bundle;
+5. builds the disk image, **signs the image too**, notarises and staples that;
+6. asks Gatekeeper the same question a user's Mac will ask, and writes
+   `build/SHA256SUMS.txt`.
+
+The app is sandboxed and holds three entitlements: `app-sandbox`,
+`network.client` (Google's HTTPS endpoints) and `network.server` (the loopback
+listener used for the few seconds of the OAuth redirect).
+
+> **Why not the `.xcent`.** An ordinary (non-archive) Release build injects
+> `com.apple.security.get-task-allow`, the entitlement that lets any process
+> attach a debugger. Re-signing from the build's own entitlements file would
+> ship that, and a debuggable app is one whose OAuth tokens can be read out of
+> memory. The build passes `CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO` and signs
+> from `DeadlineFloat/DeadlineFloat.entitlements`, then checks the result.
+
+> **Why the disk image is signed as well as notarised.** A stapled ticket on an
+> unsigned image leaves Gatekeeper nothing to evaluate:
+> `spctl --assess --type open --context context:primary-signature` answers
+> *rejected: no usable signature*. The image is the file people actually
+> download, so it gets a signature of its own.
+
+To sign with a different identity or team:
 
 ```bash
 DEADLINEFLOAT_TEAM=ABCDE12345 Tools/build_release.sh
@@ -293,77 +324,115 @@ DEADLINEFLOAT_IDENTITY="Developer ID Application: Your Name (ABCDE12345)" \
   Tools/build_release.sh
 ```
 
+Then point the website's download block at the artefacts:
+
+```bash
+Tools/update_download.sh          # version, size and checksums, from build/
+```
+
+It refuses to run if the disk image carries no notarisation ticket, so the page
+cannot advertise a download that will not open.
+
 To regenerate the previews in this README:
 
 ```bash
 Tools/make_screenshots.sh
 ```
 
+To redraw the app icon and the disk image backdrop:
+
+```bash
+swift Tools/make_icon.swift DeadlineFloat/Assets.xcassets/AppIcon.appiconset
+swift Tools/make_dmg_background.swift build/dmg-background
+```
+
 ---
 
 ## Shipping it to other people
 
-Everything above gets the app working on your own Mac. Handing it to strangers
-needs three more things, none of which is code.
+All of this is done. It is written down because it is the part that is easy to
+get subtly wrong, and because the credentials it depends on live only on one
+Mac.
 
-### 1 · A Developer ID certificate and notarisation
+### Where things live
 
-A build signed with **Apple Development** runs only on machines provisioned for
-your team. For anyone else, you need a **Developer ID Application** certificate —
-create one at <https://developer.apple.com/account/resources/certificates> — and
-you must notarise the result, or Gatekeeper will refuse to open it:
+| | |
+|---|---|
+| Source | `21J3phy/deadlinefloat-app` — **private** |
+| Website and releases | [`21J3phy/deadlinefloat`](https://github.com/21J3phy/deadlinefloat) — public, Pages from `main` at `/docs` |
+| Root of the host | [`21J3phy/21J3phy.github.io`](https://github.com/21J3phy/21J3phy.github.io) — public; exists so the whole host can be verified, not just a path |
+| Download | <https://github.com/21J3phy/deadlinefloat/releases> |
 
-```bash
-DEADLINEFLOAT_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
-  Tools/build_release.sh
+The split is deliberate. The site, the privacy policy and the downloads have to
+stay public on `21j3phy.github.io/deadlinefloat/`, because that is the domain
+Google's OAuth configuration and Search Console are pointed at and the URLs
+cannot move without redoing both. The source does not have to be public, so it
+is not.
 
-xcrun notarytool submit build/DeadlineFloat.zip \
-  --apple-id you@example.com --team-id TEAMID \
-  --password <app-specific-password> --wait
+### 1 · Signing and notarisation — done
 
-xcrun stapler staple build/Release/DeadlineFloat.app
+A **Developer ID Application** certificate exists for team `GK2Z5G7FG9`
+(created 21 September 2026, G2 Sub-CA, expires 17 September 2031). Apple only
+issues these to the *Account Holder* — an App Store Connect API key cannot, it
+answers `403 This operation can only be performed by the Account Holder` — so it
+has to be made in the browser at
+<https://developer.apple.com/account/resources/certificates/add>.
+
+Notarisation runs from a keychain profile called `deadlinefloat`, holding an App
+Store Connect API key. Both, and how to restore them onto another Mac, are in
+`Secrets/SIGNING.md` — git-ignored, on this machine only. **A lost Developer ID
+private key cannot be recovered and Apple allows only a handful of these
+certificates per account, so keep a backup off this Mac.**
+
+`Tools/build_release.sh` does the rest. A released build reports:
+
+```
+build/Release/DeadlineFloat.app: accepted
+source=Notarized Developer ID
 ```
 
-### 2 · Google OAuth publishing and verification
+### 2 · Google OAuth publishing — done
 
-**Current status: the consent screen is in Testing**, which means refresh tokens
-expire after **7 days** and you re-authorise weekly. The app handles that
-expiry cleanly — it stops retrying and offers Reconnect — but it is worth
-clearing.
+The consent screen is **In production** (published 21 September 2026), so refresh
+tokens no longer expire after seven days.
 
-Publishing is blocked on the console's **Branding** page, which needs four things
-before it will let the app move to production:
+### 3 · Google verification — not done, and blocked
 
-| Needed | Notes |
-|---|---|
-| Application homepage | Any page that describes the app |
-| Privacy policy URL | [`Documentation/PRIVACY.md`](Documentation/PRIVACY.md) is written and accurate — publish it |
-| Authorised domain | Must be a domain verified in [Google Search Console](https://search.google.com/search-console) |
-| App logo | `DeadlineFloat/Assets.xcassets/AppIcon.appiconset/icon_512x512.png` |
+`calendar.readonly` is one of Google's **sensitive** scopes — sensitive, not
+*restricted*, so no third-party security assessment is involved. A published but
+unverified app still works, with two consequences:
 
-The site in [`docs/`](docs/) covers the first, second and fourth, and is already
-live at <https://21j3phy.github.io/deadlinefloat/> via GitHub Pages. What remains
-is verifying `21j3phy.github.io` in
-[Google Search Console](https://search.google.com/search-console) and filling in
-the Branding page.
-[`Documentation/PUBLISH_PROMPT.md`](Documentation/PUBLISH_PROMPT.md) is a brief
-for doing exactly that.
+- a **"Google hasn't verified this app"** interstitial on first sign-in, which
+  the user clears with *Advanced → Go to DeadlineFloat*;
+- a **100-user cap** that applies over the lifetime of the project and
+  **cannot be reset or raised** without verification.
 
-Once published, `calendar.readonly` is one of Google's **sensitive** scopes, so an
-unverified-but-published app still works while being capped at **100 users** and
-showing a "Google hasn't verified this app" interstitial. Removing that screen
-means submitting for verification — expect the same URLs plus a demo video of the
-OAuth flow. Confirm the current list in the console's own Verification Center
-rather than trusting this paragraph; Google changes it.
+Data-access verification requires verified branding first, and branding
+verification keeps returning:
 
-`calendar.readonly` is *sensitive*, not *restricted*, so no independent
-third-party security assessment is involved.
+> The website of your home page URL "https://21j3phy.github.io/deadlinefloat/"
+> is not registered to you.
 
-### 3 · Google sign-in branding
+`https://21j3phy.github.io/` is verified in Google Search Console with this
+account as **Owner**, and `21j3phy.github.io` is registered as the authorised
+domain, so the obvious reading of that message is already satisfied. The likely
+cause is that `github.io` is on the [Public Suffix
+List](https://publicsuffix.org): every `*.github.io` name is a shared
+sub-domain rather than a domain anyone registers, and Google's brand review
+wants a domain you own. If that is right, the fix is a real domain — buy one,
+point it at GitHub Pages with a `CNAME`, update the two Branding URLs and the
+authorised domain, and re-verify.
 
-The sign-in button currently reads "Sign in with Google" with no logo, because
-Google's branding guidelines want their own supplied asset rather than a redrawn
-one. Drop Google's official mark into `Assets.xcassets` as an image set named
+An earlier rejection — *"Your logo does not uniquely identify your brand and
+identity"* — was the app icon being Apple's `hourglass` SF Symbol, a system
+glyph rather than a drawing of this app. `Tools/make_icon.swift` now draws the
+product instead, and that objection cleared.
+
+### 4 · Google sign-in branding
+
+The sign-in button reads "Sign in with Google" with no logo, because Google's
+branding guidelines want their own supplied asset rather than a redrawn one.
+Drop Google's official mark into `Assets.xcassets` as an image set named
 **GoogleLogo** and it appears in the button automatically — no code change.
 
 ### Shared quota

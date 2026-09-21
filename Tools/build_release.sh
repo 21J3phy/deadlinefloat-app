@@ -200,6 +200,16 @@ DMG=""
 if [[ "$MAKE_DMG" == 1 ]]; then
   DMG="$OUTPUT/DeadlineFloat-$VERSION.dmg"
   Tools/make_dmg.sh "$APP" "$DMG"
+
+  # Sign the disk image itself, not just the app inside it. A stapled ticket on
+  # an unsigned image leaves Gatekeeper with nothing to evaluate —
+  #   spctl --assess --type open --context context:primary-signature
+  # answers "rejected: no usable signature" — and the image is the file people
+  # actually download and hand to each other.
+  echo "▸ Signing the disk image…"
+  codesign --force --sign "$IDENTITY" --timestamp "$DMG"
+  codesign --verify --strict --verbose=2 "$DMG"
+
   if [[ "$NOTARIZE" == 1 ]]; then
     # The disk image is notarised in its own right: it is the file people
     # download, and Gatekeeper checks it before anything inside it.
@@ -215,6 +225,9 @@ spctl --assess --type execute --verbose=4 "$APP" 2>&1 | sed 's/^/    /' || true
 xcrun stapler validate "$APP" 2>&1 | sed 's/^/    /' || true
 if [[ -n "$DMG" && "$NOTARIZE" == 1 ]]; then
   xcrun stapler validate "$DMG" 2>&1 | sed 's/^/    /' || true
+  # The same question Gatekeeper asks when someone opens the download.
+  spctl --assess --type open --context context:primary-signature --verbose=4 "$DMG" 2>&1 \
+    | sed 's/^/    /' || true
 fi
 
 echo "▸ Checksums:"

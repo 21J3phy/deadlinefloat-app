@@ -20,6 +20,10 @@ func squirclePath(in rect: CGRect) -> CGPath {
     return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
 }
 
+func srgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, _ alpha: CGFloat = 1) -> CGColor {
+    CGColor(srgbRed: red, green: green, blue: blue, alpha: alpha)
+}
+
 func draw(size: CGFloat) -> CGImage? {
     let pixels = Int(size)
     guard let context = CGContext(
@@ -75,40 +79,128 @@ func draw(size: CGFloat) -> CGImage? {
     )
     context.restoreGState()
 
-    // The hourglass mark, drawn from the system symbol so it matches the app.
-    let glyphSide = size * 0.46
-    let glyphRect = CGRect(
-        x: (size - glyphSide) / 2,
-        y: (size - glyphSide) / 2,
-        width: glyphSide,
-        height: glyphSide
+    // The mark is the product: the squircle is the screen, and the bar is down
+    // its right edge — dark glass, flush with the bezel, rounded only on the
+    // inner side, exactly as it sits on a real display. The day is drawn on it
+    // as blocks of their Google colour, the red needle marks now, and the pill
+    // that says what is on floats beside it.
+    //
+    // An earlier attempt drew the bar as a free-standing white stick with
+    // coloured bands across it and a white tab on one side, which read as a
+    // pregnancy test. Anchoring it to the edge and making it dark glass — which
+    // is what the app actually draws — is what fixes that.
+    //
+    // Measured from the top, the way the interface is described, and converted
+    // at the point of use because Core Graphics counts upward.
+    func fromTop(_ fraction: CGFloat) -> CGFloat { size - size * fraction }
+
+    context.saveGState()
+    context.addPath(path)          // everything below is clipped to the screen
+    context.clip()
+
+    let barWidth = size * 0.125
+    let barRight = body.maxX + size * 0.02   // past the edge; the clip trims it
+    // Kept inside the squircle's straight flank: run it any further and the
+    // rounded caps collide with the corner curve and leave a wedge.
+    let barTop: CGFloat = 0.168
+    let barBottom: CGFloat = 0.832
+    let barRect = CGRect(
+        x: barRight - barWidth,
+        y: fromTop(barBottom),
+        width: barWidth,
+        height: size * (barBottom - barTop)
     )
-    let configuration = NSImage.SymbolConfiguration(pointSize: glyphSide, weight: .medium)
-    if let symbol = NSImage(systemSymbolName: "hourglass", accessibilityDescription: nil)?
-        .withSymbolConfiguration(configuration) {
-        let tinted = NSImage(size: symbol.size, flipped: false) { rect in
-            NSColor.white.set()
-            rect.fill()
-            symbol.draw(in: rect, from: .zero, operation: .destinationIn, fraction: 1)
-            return true
-        }
-        var proposed = CGRect(origin: .zero, size: tinted.size)
-        if let cgSymbol = tinted.cgImage(forProposedRect: &proposed, context: nil, hints: nil) {
-            let aspect = CGFloat(cgSymbol.width) / CGFloat(cgSymbol.height)
-            var target = glyphRect
-            if aspect > 1 {
-                target.size.height = glyphRect.width / aspect
-                target.origin.y = (size - target.height) / 2
-            } else {
-                target.size.width = glyphRect.height * aspect
-                target.origin.x = (size - target.width) / 2
-            }
-            context.setShadow(offset: CGSize(width: 0, height: -size * 0.006), blur: size * 0.02,
-                              color: CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.35))
-            context.draw(cgSymbol, in: target)
-            context.setShadow(offset: .zero, blur: 0, color: nil)
-        }
+    let radius = barWidth * 0.46
+    let bar = CGPath(roundedRect: barRect, cornerWidth: radius, cornerHeight: radius, transform: nil)
+
+    context.addPath(bar)
+    context.setFillColor(CGColor(srgbRed: 0.055, green: 0.050, blue: 0.125, alpha: 0.94))
+    context.fillPath()
+
+    // The day's events, as far down the bar as they fall and as long as they
+    // last — the same rule the real sliver draws by. Four, because a fifth is
+    // indistinguishable at 32 points.
+    struct Block { let from: CGFloat; let to: CGFloat; let colour: CGColor }
+    let blocks = [
+        Block(from: 0.075, to: 0.175, colour: srgb(0.28, 0.52, 0.96)),   // blueberry
+        Block(from: 0.235, to: 0.345, colour: srgb(0.13, 0.70, 0.52)),   // basil
+        Block(from: 0.430, to: 0.600, colour: srgb(0.98, 0.72, 0.22)),   // banana — the one on now
+        Block(from: 0.700, to: 0.880, colour: srgb(0.92, 0.33, 0.37))    // tomato — the deadline
+    ]
+
+    context.saveGState()
+    context.addPath(bar)
+    context.clip()
+    for block in blocks {
+        context.setFillColor(block.colour)
+        context.fill(CGRect(
+            x: barRect.minX,
+            y: barRect.maxY - barRect.height * block.to,
+            width: barRect.width,
+            height: barRect.height * (block.to - block.from)
+        ))
     }
+    context.restoreGState()
+
+    // A hairline down the bar's inner side, the way glass catches light at an
+    // edge, so it separates from the screen behind it.
+    context.addPath(bar)
+    context.setStrokeColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.30))
+    context.setLineWidth(max(0.75, size * 0.007))
+    context.strokePath()
+
+    // Now: the pill that floats beside the bar, and the needle through it.
+    let nowFraction: CGFloat = 0.515        // of the bar's own height, from the top
+    let needleY = barRect.maxY - barRect.height * nowFraction
+    let pillHeight = size * 0.140
+    let pillRect = CGRect(
+        x: size * 0.150,
+        y: needleY - pillHeight / 2,
+        width: size * 0.375,
+        height: pillHeight
+    )
+    let pillRadius = pillHeight * 0.38
+    context.saveGState()
+    context.setShadow(offset: CGSize(width: 0, height: -size * 0.008), blur: size * 0.026,
+                      color: CGColor(srgbRed: 0.02, green: 0.01, blue: 0.08, alpha: 0.5))
+    context.addPath(CGPath(roundedRect: pillRect, cornerWidth: pillRadius,
+                           cornerHeight: pillRadius, transform: nil))
+    context.setFillColor(CGColor(srgbRed: 0.055, green: 0.050, blue: 0.125, alpha: 0.94))
+    context.fillPath()
+    context.restoreGState()
+
+    // Inside it: the event's colour, then its countdown as one bar of type.
+    // Both vanish below about 32 points, which is the right thing to happen.
+    let dot = CGRect(x: pillRect.minX + pillHeight * 0.34,
+                     y: pillRect.midY - pillHeight * 0.16,
+                     width: pillHeight * 0.32, height: pillHeight * 0.32)
+    context.addPath(CGPath(roundedRect: dot, cornerWidth: dot.width * 0.34,
+                           cornerHeight: dot.width * 0.34, transform: nil))
+    context.setFillColor(srgb(0.98, 0.72, 0.22))
+    context.fillPath()
+
+    let textBar = CGRect(x: dot.maxX + pillHeight * 0.26, y: pillRect.midY - pillHeight * 0.075,
+                         width: pillRect.width - (dot.maxX - pillRect.minX) - pillHeight * 0.62,
+                         height: pillHeight * 0.15)
+    context.addPath(CGPath(roundedRect: textBar, cornerWidth: textBar.height / 2,
+                           cornerHeight: textBar.height / 2, transform: nil))
+    context.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.68))
+    context.fillPath()
+
+    // The needle: from the pill, across the bar, level with the block it marks.
+    let needleHeight = max(1, size * 0.021)
+    let needleRect = CGRect(
+        x: pillRect.maxX - size * 0.010,
+        y: needleY - needleHeight / 2,
+        width: barRect.maxX - (pillRect.maxX - size * 0.010),
+        height: needleHeight
+    )
+    context.addPath(CGPath(roundedRect: needleRect, cornerWidth: needleHeight / 2,
+                           cornerHeight: needleHeight / 2, transform: nil))
+    context.setFillColor(srgb(0.96, 0.24, 0.26))
+    context.fillPath()
+
+    context.restoreGState()
 
     // Hairline rim, so the icon reads as a physical object.
     context.addPath(squirclePath(in: body.insetBy(dx: size * 0.004, dy: size * 0.004)))

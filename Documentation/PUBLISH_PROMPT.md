@@ -1,5 +1,24 @@
 # Codex brief (computer use) — take DeadlineFloat's consent screen out of Testing
 
+> **Status: run on 21 September 2026. The consent screen is In production.**
+>
+> Steps 1–4 are done. Search Console verified `https://21j3phy.github.io/deadlinefloat/`
+> by HTML file, the Branding page was filled in, the scope list is still exactly
+> `calendar.readonly`, and *Publish app → Push to production* was confirmed. The
+> seven-day refresh-token expiry is gone.
+>
+> Two things this brief did not anticipate:
+>
+> 1. The repository has since been **split** — the source is private at
+>    `21J3phy/deadlinefloat-app`, and the public `21J3phy/deadlinefloat` now holds
+>    only the website and the releases, so every URL above still resolves.
+> 2. Verification, which this brief said to report on rather than start, was
+>    later attempted and is **blocked**. See *Shipping it to other people → Google
+>    verification* in the README for what it returns and why a `github.io`
+>    sub-domain is the likely cause.
+>
+> Kept as the procedure for doing this again in another Google account.
+
 Sequel to [`CODEX_PROMPT.md`](CODEX_PROMPT.md), which created the OAuth client.
 That left the app in **Testing**, so Google expires refresh tokens after seven
 days and the user re-authorises weekly. This brief clears that.
