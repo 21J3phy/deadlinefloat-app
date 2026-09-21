@@ -26,15 +26,9 @@
   <div class="wrap">
     <a class="brand" href="#top"><img src="icon.png" alt="" width="26" height="26">DeadlineFloat</a>
     <nav class="nav-links">
-      <a href="#demo">How it works</a>
       <a href="#details">Details</a>
       <a href="#privacy">Privacy</a>
     </nav>
-    <button class="nav-hourglass" type="button" data-open-bar title="Open the bar" aria-label="Open the bar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M7 3h10M7 21h10"/><path d="M8 3v3.2c0 1.1.5 2.1 1.4 2.8L12 11l2.6-2c.9-.7 1.4-1.7 1.4-2.8V3"/><path d="M8 21v-3.2c0-1.1.5-2.1 1.4-2.8L12 13l2.6 2c.9.7 1.4 1.7 1.4 2.8V21"/>
-      </svg>
-    </button>
     <a class="nav-cta" data-dl href="https://github.com/21J3phy/deadlinefloat/releases/download/v1.0/DeadlineFloat-1.0.dmg">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M4 21h16"/>
@@ -46,157 +40,93 @@
 
 <main id="top">
 
-<!-- ================================================================= hero -->
-<section class="hero">
-  <div class="wrap">
-    <img class="hero-icon reveal" src="icon.png" alt="DeadlineFloat app icon" width="104" height="104">
-    <p class="eyebrow reveal" style="--d:40ms">Live demo · not a video</p>
-    <h1 class="reveal" style="--d:80ms">The panel itself,<br><span class="grad">running in this page</span></h1>
-    <p class="tagline reveal" style="--d:150ms">
-      DeadlineFloat is a twelve-point sliver down the edge of your Mac that knows what
-      is due. What follows is the real thing, rebuilt in the browser from the app's own
-      demo calendar — the same Google colours, the same midnight-to-midnight ruler, the
-      same countdowns, ticking while you read.
-    </p>
-    <p class="hero-hint reveal" style="--d:220ms">
-      <span class="arrow" aria-hidden="true">↓</span>
-      <b>Scroll.</b> The bar opens on its own.
-    </p>
-  </div>
-</section>
+<!-- ======================================================== the whole show
+     One screen, pinned, for the length of this section. The scroll runs the
+     title card off, slides the bar in from the right edge, walks the four
+     descriptions down the left while the panel does what each one describes,
+     and ends on the download button. -->
+<section class="show" id="show">
+  <div class="show-pin">
 
-<!-- ================================================ the story, told by scroll -->
-<section id="demo" class="scrolly">
-  <div class="wrap">
-    <div class="scrolly-grid">
-
-      <div class="steps-col">
-        <div class="step">
-          <span class="n">At rest</span>
-          <h2>Twelve points wide</h2>
-          <p>
-            Down the edge of every display: the whole day as a ruler, midnight to
-            midnight, every event drawn as long as it actually lasts, and a needle for
-            now. Beside it floats what is on — or next — with a live countdown, so you
-            can read it without opening anything at all.
-          </p>
-          <p>
-            It never steals focus from whatever you are typing in, and there is no Dock
-            icon. Just an hourglass in the menu bar.
-          </p>
-          <div class="kv">
-            <span>One bar per display</span><span>Never takes focus</span>
-            <span>Menu bar only</span><span>8–40 points wide</span>
-          </div>
-        </div>
-
-        <div class="step">
-          <span class="n">Open</span>
-          <h2>It stretches, it doesn&rsquo;t fade</h2>
-          <p>
-            Rest the pointer on the sliver, or click the hourglass, and it widens
-            sideways — the very same blocks growing into today's column while the task
-            list arrives beside them. Deadlines on the left, the day's schedule on the
-            right.
-          </p>
-          <p>
-            “HAPPENING NOW · 1 hr 13 min left” while you are inside something. “DUE NEXT
-            · in 2 hr 14 min” before the next thing lands. Whole minutes, in words, never
-            seconds — and always truncated, never rounded up, because a countdown that
-            overstates the time you have left is the one way it could actually hurt you.
-          </p>
-          <div class="kv">
-            <span>Live countdown</span><span>Flips on the minute</span>
-            <span>Ends-at time</span><span>Pin it open</span>
-          </div>
-        </div>
-
-        <div class="step">
-          <span class="n">The week</span>
-          <h2>A day, or all seven</h2>
-          <p>
-            One day, two, three, or the week. The bar widens a step each time and the
-            calendar adds a column; the list grows a section for every day it can now
-            see, and all-day items ride above the columns.
-          </p>
-          <p>
-            Every block is the colour Google Calendar actually shows you — per event or
-            per calendar, the palette Google draws with today, not the decade-old hexes
-            its API still reports. Urgency is carried by the countdown's wording and
-            colour instead, so the colour you chose for a class stays the colour of that
-            class.
-          </p>
-          <div class="kv">
-            <span>Duration blocks</span><span>All-day events</span>
-            <span>Your Google colours</span><span>Light and dark</span>
-          </div>
-        </div>
-
-        <div class="step">
-          <span class="n">Done</span>
-          <h2>Swipe it done</h2>
-          <p>
-            A two-finger swipe marks a deadline done, with a tap from the trackpad.
-            Finished items wait in a drawer above the list — scroll up past the barrier
-            to see them, and swipe one back whenever you like.
-          </p>
-          <p>
-            What counts as a deadline is yours: titles that start with <code>DUE</code>
-            or <code>SUBMIT</code>, or contain <code>due</code> or <code>deadline</code>.
-            Every keyword is editable, matching is case- and accent-insensitive and
-            whole-word, and <code>DONE</code> or <code>CANCELLED</code> items always stay
-            hidden.
-          </p>
-          <div class="kv">
-            <span>Keyword rules</span><span>Per-calendar</span>
-            <span>Compact rows</span><span>Launch at login</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stage-col">
-        <div class="stage-frame">
-          <div class="mac">
-            <div class="mac-screen">
-              <div class="mac-menubar">
-                <span class="mb-apple" aria-hidden="true"></span>
-                <span class="mb-item">Finder</span>
-                <span class="mb-item">File</span>
-                <span class="mb-item">Edit</span>
-                <span class="mb-item">View</span>
-                <span class="mb-right">
-                  <button class="mb-hourglass is-pulsing" type="button" title="Open DeadlineFloat" aria-label="Open DeadlineFloat">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M7 3h10M7 21h10"/><path d="M8 3v3.2c0 1.1.5 2.1 1.4 2.8L12 11l2.6-2c.9-.7 1.4-1.7 1.4-2.8V3"/><path d="M8 21v-3.2c0-1.1.5-2.1 1.4-2.8L12 13l2.6 2c.9.7 1.4 1.7 1.4 2.8V21"/>
-                    </svg>
-                  </button>
-                  <span class="mb-item">2:07 PM</span>
-                </span>
-              </div>
-              <div class="mac-stage" id="demo-stage"></div>
-            </div>
-          </div>
-
-          <div class="mac-fallback">
-            <picture>
-              <source srcset="screenshots/expanded.webp" type="image/webp">
-              <img src="screenshots/expanded.png" width="1376" height="1464" alt="The DeadlineFloat panel open on one day" style="width:100%;height:auto;border-radius:14px">
-            </picture>
-            <p>The interactive demo needs a wider screen. This is the real panel, rendered by the app itself.</p>
-          </div>
-        </div>
-      </div>
-
+    <div class="show-title">
+      <img class="show-mark" src="icon.png" alt="" width="96" height="96">
+      <h1>DeadlineFloat</h1>
+      <p>Your deadlines, always in view — a twelve-point bar down the edge of your Mac.</p>
+      <span class="show-scroll"><i aria-hidden="true">↓</i> Scroll</span>
     </div>
-  </div>
-</section>
 
-<!-- =============================================================== the payoff -->
-<section class="finale" id="get">
-  <div class="finale-pin">
-    <div class="finale-inner">
-      <p class="finale-eyebrow">That is the whole app.</p>
-      <h2 class="finale-title">Put it on your Mac.</h2>
+    <div class="show-copy" aria-label="How it works">
+      <article class="beat">
+        <span class="n">At rest</span>
+        <h2>Twelve points wide</h2>
+        <p>
+          Down the edge of every display: the whole day as a ruler, midnight to
+          midnight, every event drawn as long as it actually lasts, and a needle for
+          now. Beside it floats what is on — or next — with a live countdown, so you
+          can read it without opening anything at all.
+        </p>
+        <p>
+          It never steals focus from whatever you are typing in, and there is no Dock
+          icon. Just an hourglass in the menu bar.
+        </p>
+        <div class="kv"><span>One bar per display</span><span>Never takes focus</span><span>8–40 points wide</span></div>
+      </article>
+
+      <article class="beat">
+        <span class="n">Open</span>
+        <h2>It stretches, it doesn&rsquo;t fade</h2>
+        <p>
+          Rest the pointer on the sliver and it widens sideways — the very same blocks
+          growing into today's column while the task list arrives beside them.
+          Deadlines on the left, the day's schedule on the right.
+        </p>
+        <p>
+          “HAPPENING NOW · 1 hr 13 min left” while you are inside something. “DUE NEXT
+          · in 2 hr 14 min” before the next thing lands. Whole minutes, in words, never
+          seconds — and always truncated, never rounded up, because a countdown that
+          overstates the time you have left is the one way it could actually hurt you.
+        </p>
+        <div class="kv"><span>Live countdown</span><span>Flips on the minute</span><span>Pin it open</span></div>
+      </article>
+
+      <article class="beat">
+        <span class="n">The week</span>
+        <h2>A day, or all seven</h2>
+        <p>
+          One day, two, three, or the week. The bar widens a step each time and the
+          calendar adds a column; the list grows a section for every day it can now
+          see, and all-day items ride above the columns.
+        </p>
+        <p>
+          Every block is the colour Google Calendar actually shows you — per event or
+          per calendar, the palette Google draws with today, not the decade-old hexes
+          its API still reports. Urgency is carried by the countdown's wording and
+          colour instead, so the colour you chose for a class stays that class's colour.
+        </p>
+        <div class="kv"><span>Duration blocks</span><span>All-day events</span><span>Your Google colours</span></div>
+      </article>
+
+      <article class="beat">
+        <span class="n">Done</span>
+        <h2>Swipe it done</h2>
+        <p>
+          A two-finger swipe marks a deadline done, with a tap from the trackpad.
+          Finished items wait in a drawer above the list — scroll up past the barrier
+          to see them, and swipe one back whenever you like.
+        </p>
+        <p>
+          What counts as a deadline is yours: titles that start with <code>DUE</code>
+          or <code>SUBMIT</code>, or contain <code>due</code> or <code>deadline</code>.
+          Every keyword is editable, matching is whole-word, and <code>DONE</code> or
+          <code>CANCELLED</code> items always stay hidden.
+        </p>
+        <div class="kv"><span>Keyword rules</span><span>Per-calendar</span><span>Launch at login</span></div>
+      </article>
+    </div>
+
+    <div class="show-get">
+      <p class="show-get-eyebrow">That is the whole app.</p>
+      <h2>Put it on your Mac.</h2>
       <!-- download:start — rewritten by Tools/update_download.sh from the built artefacts -->
     <div class="download">
       <a class="get" href="https://github.com/21J3phy/deadlinefloat/releases/download/v1.0/DeadlineFloat-1.0.dmg">
@@ -219,6 +149,19 @@ a7cd8cb5be1b247f8884b19ffd65fd2b9474af6f72009215a0632fbb10e7b08f  DeadlineFloat-
     </div>
     <!-- download:end -->
     </div>
+
+    <!-- the panel itself, at the right edge of the screen -->
+    <div class="show-stage" id="demo-stage"></div>
+
+    <!-- narrow screens cannot hold the pinned show; they get the real thing -->
+    <div class="show-fallback">
+      <picture>
+        <source srcset="screenshots/expanded.webp" type="image/webp">
+        <img src="screenshots/expanded.png" width="1376" height="1464" alt="The DeadlineFloat panel open on one day">
+      </picture>
+      <p>The interactive demo needs a wider screen. This is the real panel, rendered by the app itself.</p>
+    </div>
+
   </div>
 </section>
 
@@ -327,15 +270,13 @@ a7cd8cb5be1b247f8884b19ffd65fd2b9474af6f72009215a0632fbb10e7b08f  DeadlineFloat-
   <div class="wrap">
     <span>DeadlineFloat · © <span data-year>2026</span></span>
     <nav>
-      <a href="#get">Download</a>
+      <a href="#show">Download</a>
       <a href="privacy.html">Privacy</a>
       <a href="https://github.com/21J3phy/deadlinefloat">Source</a>
       <a href="mailto:niravsurabhi@gmail.com">Contact</a>
     </nav>
   </div>
 </footer>
-
-<div class="edgebar" id="edgebar" aria-hidden="true"></div>
 
 <script src="site.js" defer></script>
 </body>

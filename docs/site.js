@@ -537,7 +537,7 @@
     return api;
   }
 
-  /* --------------------------------------------------------- the stage */
+  /* --------------------------------------------------------- the panel */
 
   const panels = [];
   const stage = document.querySelector('#demo-stage');
@@ -547,67 +547,18 @@
     demo = createPanel(stage, { range: 1, open: false });
     panels.push(demo);
 
+    // The panel sits at the right edge of the screen with the copy at the left,
+    // so it may only have what is left over: scale it until the widest state it
+    // can reach — the week — still clears the copy column.
+    const WIDEST = LEFT + GUTTER + 7 * DAY_WIDTH[7];
     const fit = () => {
-      const w = stage.getBoundingClientRect().width;
-      demo.setScale(Math.max(.42, Math.min(1, w / 1080)));
+      const vw = window.innerWidth;
+      const copy = Math.min(440, vw * 0.36) + Math.max(vw * 0.05, 28) + 72;
+      demo.setScale(Math.max(.5, Math.min(1, (vw - copy) / WIDEST)));
     };
     fit();
-    new ResizeObserver(fit).observe(stage);
-
-    // the hourglass in the mock menu bar opens it, exactly as in the app
-    const hg = document.querySelector('.mb-hourglass');
-    if (hg) hg.addEventListener('click', () => {
-      demo.setOpen(!demo.isOpen);
-      hg.classList.remove('is-pulsing');
-    });
-    stage.addEventListener('df:open', e => {
-      if (hg) hg.classList.toggle('is-pulsing', !e.detail);
-    });
+    window.addEventListener('resize', fit, { passive: true });
   }
-
-  /* ------------------------------------------------ the edge of the page */
-
-  const edgeHost = document.querySelector('#edgebar');
-  let edge = null;
-
-  if (edgeHost && window.matchMedia('(min-width: 1240px)').matches && window.innerHeight > 620) {
-    edgeHost.classList.add('is-live');
-    document.body.classList.add('has-edgebar');
-    edge = createPanel(edgeHost, { range: 1, open: false });
-    panels.push(edge);
-    edge.setScale(Math.max(.82, Math.min(1, window.innerHeight / 880)));
-
-    const close = el('button', 'edgebar-close',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5 5 19"/></svg>');
-    close.setAttribute('aria-label', 'Close the bar');
-    edgeHost.appendChild(close);
-    close.addEventListener('click', () => edge.setOpen(false));
-
-    // hover-dwell to open, a beat of grace to close — the app's own behaviour
-    let dwell = 0, leave = 0, hovering = false;
-    const hint = () => edgeHost.classList.toggle('is-hinting', hovering || window.scrollY < 620);
-    edge.root.addEventListener('pointerenter', () => {
-      hovering = true; hint();
-      window.clearTimeout(leave);
-      dwell = window.setTimeout(() => edge.setOpen(true), 180);
-    });
-    edge.root.addEventListener('pointerleave', () => {
-      hovering = false; hint();
-      window.clearTimeout(dwell);
-      leave = window.setTimeout(() => edge.setOpen(false), 380);
-    });
-    window.addEventListener('scroll', hint, { passive: true });
-    hint();
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') edge.setOpen(false); });
-  }
-
-  document.querySelectorAll('[data-open-bar]').forEach(b => b.addEventListener('click', e => {
-    e.preventDefault();
-    if (edge) { edge.setOpen(!edge.isOpen); return; }
-    // no room for the bar at the edge of this page — show them the demo instead
-    const d = document.querySelector('#demo');
-    if (d) d.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-  }));
 
   /* ------------------------------------------------------------ the tick */
 
@@ -635,71 +586,97 @@
     io.observe(n);
   });
 
-  /* ---- the story steps drive the demo
+  /* ----------------------------------------------------------- the show
    *
-   * Whichever step's middle is nearest the middle of the viewport is the
-   * active one, recomputed from geometry on every scroll frame rather than
-   * from IntersectionObserver edges. Edges get missed on a fast flick or a
-   * restored scroll position, and a missed edge leaves the panel showing the
-   * wrong thing for the step you are actually reading; this cannot drift.
+   * Everything on the first screen is a function of one number: how far you
+   * are through the pinned section, 0 to 1. The title card, the bar sliding in
+   * from the right edge, which description is up, what the panel is doing, and
+   * the download button at the end all read off it, so the page can never be
+   * caught in a state that does not match where you are.
    */
-  const steps = [...document.querySelectorAll('.step')];
-  let syncSteps = () => {};
 
-  if (steps.length && demo) {
-    let swept = false;
-    const acts = [
-      // at rest: a twelve-point sliver with the now-pill beside it
-      () => { demo.reset(); swept = false; demo.setOpen(false); demo.setRange(1); },
-      // open: the sliver stretches sideways into today's column
-      () => { demo.setOpen(true); demo.setRange(1); },
-      // the week: the bar widens and the calendar grows columns
-      () => { demo.setOpen(true); demo.setRange(7); },
-      // done: back to one day, then swipe the first deadline away
-      () => {
-        demo.setOpen(true);
-        demo.setRange(1);
-        if (!swept) { swept = true; window.setTimeout(() => demo.sweep(), 820); }
-      }
-    ];
+  const show = document.querySelector('.show');
+  const pin = document.querySelector('.show-pin');
+  const title = document.querySelector('.show-title');
+  const copy = document.querySelector('.show-copy');
+  const beats = [...document.querySelectorAll('.beat')];
+  const getCard = document.querySelector('.show-get');
 
-    let active = -1;
-    syncSteps = () => {
-      const mid = window.innerHeight / 2;
-      let best = 0, bestDistance = Infinity;
-      steps.forEach((step, i) => {
-        const r = step.getBoundingClientRect();
-        const d = Math.abs(r.top + r.height / 2 - mid);
-        if (d < bestDistance) { bestDistance = d; best = i; }
-      });
-      if (best === active) return;
-      active = best;
-      steps.forEach((step, i) => step.classList.toggle('is-active', i === best));
-      acts[best]();
-    };
+  /** 0 below `a`, 1 above `b`, smooth in between. */
+  const ramp = (v, a, b) => {
+    const t = Math.min(1, Math.max(0, (v - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+
+  // where each description owns the screen, as a fraction of the section
+  const BEATS = [[.17, .36], [.36, .55], [.55, .73], [.73, .88]];
+  const actFor = [
+    // at rest: a twelve-point sliver with the now-pill beside it
+    () => { demo.reset(); swept = false; demo.setOpen(false); demo.setRange(1); },
+    // open: the sliver stretches sideways into today's column
+    () => { demo.setOpen(true); demo.setRange(1); },
+    // the week: the bar widens and the calendar grows columns
+    () => { demo.setOpen(true); demo.setRange(7); },
+    // done: back to one day, then swipe the first deadline away
+    () => {
+      demo.setOpen(true);
+      demo.setRange(1);
+      if (!swept) { swept = true; window.setTimeout(() => demo.sweep(), 820); }
+    }
+  ];
+
+  let swept = false, beat = -1;
+
+  function runShow() {
+    if (!show || !pin) return;
+    const travel = show.offsetHeight - pin.offsetHeight;
+    const p = travel > 0
+      ? Math.min(1, Math.max(0, -show.getBoundingClientRect().top / travel))
+      : 0;
+
+    // the title card leaves before the bar arrives
+    const gone = ramp(p, .02, .13);
+    title.style.setProperty('--title-o', (1 - gone).toFixed(3));
+    title.style.setProperty('--title-y', (gone * 60).toFixed(1));
+
+    // the bar slides in from off the right edge, and leaves the same way
+    const slide = ramp(p, .09, .19) * (1 - ramp(p, .95, 1));
+    show.style.setProperty('--slide', slide.toFixed(3));
+
+    // which description is up, and what the panel should be doing
+    let next = p >= BEATS[3][1] ? 3 : -1;
+    BEATS.forEach(([a, b], i) => { if (p >= a && p < b) next = i; });
+    if (next >= 0 && next !== beat) {
+      beat = next;
+      beats.forEach((el, i) => el.classList.toggle('is-on', i === beat));
+      if (demo) actFor[beat]();
+    } else if (next < 0 && beat !== -1) {
+      // scrolled back above the first description: put the bar away too, so it
+      // slides back in as a sliver rather than mid-open
+      beat = -1;
+      beats.forEach(el => el.classList.remove('is-on'));
+      if (demo) { demo.setOpen(false); demo.setRange(1); }
+    }
+
+    // the descriptions step aside for the download button
+    const get = ramp(p, .88, .96);
+    getCard.style.setProperty('--get-o', get.toFixed(3));
+    getCard.classList.toggle('is-on', get > .5);
+    copy.style.opacity = (1 - get).toFixed(3);
   }
 
+  /* ------------------------------------------------------ the scroll loop */
+
   const nav = document.querySelector('.nav');
-  const finale = document.querySelector('.finale');
 
   function update() {
     if (nav) nav.classList.toggle('is-stuck', window.scrollY > 20);
-    syncSteps();
-
-    // the download button grows as you scroll the finale under its pin
-    if (finale && !reduced) {
-      const r = finale.getBoundingClientRect();
-      const travel = r.height - window.innerHeight;
-      const p = travel > 0 ? Math.min(1, Math.max(0, -r.top / travel)) : 1;
-      // most of the growth happens early, so it has settled by the time it is
-      // centred and there is a beat of stillness before the page ends
-      finale.style.setProperty('--z', Math.min(1, p / .7).toFixed(3));
-    }
+    runShow();
   }
 
   // rAF-gate the scroll handler, but never let the gate latch: a tab that is
   // backgrounded mid-scroll stops servicing requestAnimationFrame, and a gate
-  // that is still closed when it comes back would freeze the whole page.
+  // still closed when it comes back would freeze the whole page.
   let ticking = false;
   function onScroll() {
     if (ticking) return;
