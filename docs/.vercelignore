@@ -1,0 +1,5 @@
+# Local-only: the OIDC token the CLI fetches, and the project link.
+# Neither belongs in a static deployment that serves every file it is given.
+.env*
+.vercel
+.gitignore
