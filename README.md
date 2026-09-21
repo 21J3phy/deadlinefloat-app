@@ -4,7 +4,7 @@ A bar down the edge of your Mac's screen, and an hourglass in the menu bar, for
 the Google Calendar deadlines you actually have to do something about — what is
 due today and when, what your day looks like, and the days after.
 
-**[Download DeadlineFloat 1.0 →](https://github.com/21J3phy/deadlinefloat/releases/latest)**  ·  [website](https://21j3phy.github.io/deadlinefloat/)
+**[Download DeadlineFloat 1.0 →](https://github.com/21J3phy/deadlinefloat/releases/latest)**  ·  [website](https://deadlinefloat.vercel.app/)
 
 Signed with a Developer ID certificate, notarised by Apple and stapled, so it
 opens on any Mac running macOS 14 or later without a Gatekeeper warning.
@@ -361,13 +361,17 @@ Mac.
 | Source | `21J3phy/deadlinefloat-app` — **private** |
 | Website and releases | [`21J3phy/deadlinefloat`](https://github.com/21J3phy/deadlinefloat) — public, Pages from `main` at `/docs` |
 | Root of the host | [`21J3phy/21J3phy.github.io`](https://github.com/21J3phy/21J3phy.github.io) — public; exists so the whole host can be verified, not just a path |
+| Vercel | `deadlinefloat.vercel.app` — the URL on Google's consent screen |
 | Download | <https://github.com/21J3phy/deadlinefloat/releases> |
 
 The split is deliberate. The site, the privacy policy and the downloads have to
-stay public on `21j3phy.github.io/deadlinefloat/`, because that is the domain
-Google's OAuth configuration and Search Console are pointed at and the URLs
-cannot move without redoing both. The source does not have to be public, so it
-is not.
+stay public, because Google's OAuth configuration and Search Console are
+pointed at them. The source does not have to be public, so it is not.
+
+The site is served from two places: GitHub Pages at
+<https://21j3phy.github.io/deadlinefloat/> and Vercel at
+<https://deadlinefloat.vercel.app/>. The Vercel one is what the Google consent
+screen now links to.
 
 ### 1 · Signing and notarisation — done
 
@@ -396,7 +400,7 @@ source=Notarized Developer ID
 The consent screen is **In production** (published 21 September 2026), so refresh
 tokens no longer expire after seven days.
 
-### 3 · Google verification — not done, and blocked
+### 3 · Google verification — submitted, under review
 
 `calendar.readonly` is one of Google's **sensitive** scopes — sensitive, not
 *restricted*, so no third-party security assessment is involved. A published but
@@ -408,25 +412,41 @@ unverified app still works, with two consequences:
   **cannot be reset or raised** without verification.
 
 Data-access verification requires verified branding first, and branding
-verification keeps returning:
+verification is an **automated check that answers in under a minute**. It has
+returned the same thing for both domains the site has been served from:
 
-> The website of your home page URL "https://21j3phy.github.io/deadlinefloat/"
-> is not registered to you.
+> The website of your home page URL "…" is not registered to you.
 
-`https://21j3phy.github.io/` is verified in Google Search Console with this
-account as **Owner**, and `21j3phy.github.io` is registered as the authorised
-domain, so the obvious reading of that message is already satisfied. The likely
-cause is that `github.io` is on the [Public Suffix
-List](https://publicsuffix.org): every `*.github.io` name is a shared
-sub-domain rather than a domain anyone registers, and Google's brand review
-wants a domain you own. If that is right, the fix is a real domain — buy one,
-point it at GitHub Pages with a `CNAME`, update the two Branding URLs and the
-authorised domain, and re-verify.
+That is not a stale message and not a propagation delay. Both hosts were
+verified in Google Search Console with `niravsurabhi@gmail.com` as **Owner**
+before the check ran, both were registered as the authorised domain, and the
+second was retried five minutes later:
 
-An earlier rejection — *"Your logo does not uniquely identify your brand and
-identity"* — was the app icon being Apple's `hourglass` SF Symbol, a system
-glyph rather than a drawing of this app. `Tools/make_icon.swift` now draws the
-product instead, and that objection cleared.
+| Home page tried | Search Console | Result |
+|---|---|---|
+| `https://21j3phy.github.io/deadlinefloat/` | Owner, verified (HTML file) | not registered to you |
+| `https://deadlinefloat.vercel.app/` | Owner, verified (HTML file) | not registered to you |
+
+Both `github.io` and `vercel.app` are on the [Public Suffix
+List](https://publicsuffix.org): every name under them is a shared sub-domain
+rather than one anyone registers. The consistent reading is that Google's check
+wants a domain you actually registered, and that no free hosting sub-domain will
+pass it however thoroughly Search Console verifies the same URL.
+
+Rather than buy a domain on a guess, the console's other option was taken —
+*I believe the issues found are incorrect → Request additional review*, which
+routes to Google's **Third Party Data Safety Team**, stated as 2–3 business
+days. The console shows no pending indicator, so the reply will arrive by email
+to `niravsurabhi@gmail.com`.
+
+**If that review confirms the automated finding**, the fix is a registrable
+domain: buy one, point it at the Vercel deployment, re-verify it in Search
+Console, and change the two Branding URLs plus the authorised domain to match.
+Everything else on the Branding page is already accepted — the logo objection
+cleared once the icon stopped being Apple's `hourglass` SF Symbol and became a
+drawing of the app.
+
+Under 100 users none of this blocks anything.
 
 ### 4 · Google sign-in branding
 

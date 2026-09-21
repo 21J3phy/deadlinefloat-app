@@ -13,9 +13,12 @@
 >    `21J3phy/deadlinefloat-app`, and the public `21J3phy/deadlinefloat` now holds
 >    only the website and the releases, so every URL above still resolves.
 > 2. Verification, which this brief said to report on rather than start, was
->    later attempted and is **blocked**. See *Shipping it to other people → Google
->    verification* in the README for what it returns and why a `github.io`
->    sub-domain is the likely cause.
+>    later attempted. Google's automated branding check refuses the home page as
+>    "not registered to you" on **both** `21j3phy.github.io` and
+>    `deadlinefloat.vercel.app`, each verified in Search Console as Owner first —
+>    both are Public Suffix List hosts. It is now with Google's Third Party Data
+>    Safety Team for human review. See *Shipping it to other people → Google
+>    verification* in the README.
 >
 > Kept as the procedure for doing this again in another Google account.
 
