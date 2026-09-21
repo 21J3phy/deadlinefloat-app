@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DeadlineFloat — your deadlines, always in view</title>
-<meta name="description" content="A small always-on-top macOS window that shows your upcoming Google Calendar deadlines. Native SwiftUI, read-only access, nothing leaves your Mac.">
+<meta name="description" content="A bar down the edge of your Mac's screen for your Google Calendar deadlines: what is due today and when, and what your day looks like. Native SwiftUI, read-only access, nothing leaves your Mac.">
 <link rel="icon" href="favicon.png" type="image/png">
 <meta property="og:title" content="DeadlineFloat">
-<meta property="og:description" content="A small always-on-top macOS window that shows your upcoming Google Calendar deadlines.">
-<meta property="og:image" content="screenshots/dark.png">
+<meta property="og:description" content="A bar down the edge of your Mac's screen for your Google Calendar deadlines.">
+<meta property="og:image" content="screenshots/expanded.png">
 <meta property="og:type" content="website">
 <style>
   :root {
@@ -105,6 +105,58 @@
     background: var(--card); border: 1px solid var(--rim); border-radius: 6px; padding: 2px 6px;
   }
 
+  /* Download */
+  .download { text-align: center; margin: 34px 0 0; }
+  .get {
+    display: inline-flex; align-items: center; gap: 11px;
+    font-size: 1.04rem; font-weight: 600; letter-spacing: -0.012em;
+    color: #fff; background: linear-gradient(180deg, #7b5cf0, #5f3fd6);
+    border: 1px solid rgba(255,255,255,.22); border-radius: 14px;
+    padding: 15px 28px; text-decoration: none;
+    box-shadow: 0 12px 30px rgba(74,42,180,.42), inset 0 1px 0 rgba(255,255,255,.28);
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  .get:hover {
+    text-decoration: none; transform: translateY(-1px);
+    box-shadow: 0 16px 38px rgba(74,42,180,.5), inset 0 1px 0 rgba(255,255,255,.32);
+  }
+  .get svg { width: 19px; height: 19px; flex: none; }
+  .meta { margin: 13px 0 0; font-size: .85rem; color: var(--ink-3); }
+  .meta a { color: var(--ink-3); text-decoration: underline; text-underline-offset: 2px; }
+  .sums {
+    margin: 16px auto 0; max-width: 620px; text-align: left;
+    background: var(--card); border: 1px solid var(--rim); border-radius: 13px;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .sums summary {
+    cursor: pointer; padding: 11px 16px; font-size: .84rem; color: var(--ink-2);
+    list-style: none;
+  }
+  .sums summary::-webkit-details-marker { display: none; }
+  .sums summary::before { content: "▸ "; color: var(--ink-3); }
+  .sums[open] summary::before { content: "▾ "; }
+  .sums pre {
+    margin: 0; padding: 0 16px 14px; overflow-x: auto;
+    font: 500 .74rem/1.7 ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    color: var(--ink-2);
+  }
+
+  /* Install steps */
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  .steps li {
+    counter-increment: step; position: relative; padding: 16px 20px 16px 56px;
+    background: var(--card); border: 1px solid var(--rim); border-radius: 15px;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    color: var(--ink-2); font-size: .95rem; line-height: 1.55;
+  }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 18px; top: 15px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: .78rem; font-weight: 650; line-height: 24px; text-align: center;
+  }
+  .steps strong { color: var(--ink); font-weight: 600; }
+
   footer {
     border-top: 1px solid var(--hairline); margin-top: 40px;
     padding: 34px 0 64px; color: var(--ink-3); font-size: .88rem;
@@ -123,41 +175,68 @@
   <header>
     <img class="icon" src="icon.png" alt="DeadlineFloat app icon">
     <h1>Your deadlines,<br>always in view</h1>
-    <p class="tagline">A small always-on-top window for the Google Calendar events you actually have to do something about.</p>
+    <p class="tagline">A bar at the edge of your screen for the Google Calendar events you actually have to do something about.</p>
     <div class="badges">
       <span class="badge">macOS 14+</span>
       <span class="badge">Native SwiftUI</span>
       <span class="badge">Liquid Glass</span>
       <span class="badge">Read-only calendar access</span>
     </div>
+    <!-- download:start — rewritten by Tools/update_download.sh from the built artefacts -->
+    <div class="download">
+      <a class="get" href="https://github.com/21J3phy/deadlinefloat/releases/download/v1.0/DeadlineFloat-1.0.dmg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12"></path><path d="M7 12l5 5 5-5"></path><path d="M4 21h16"></path>
+        </svg>
+        Download for Mac
+      </a>
+      <p class="meta">
+        Version 1.0 · 4.3MB · macOS 14 or later · Apple silicon and Intel<br>
+        Signed and notarised by Apple. <a href="https://github.com/21J3phy/deadlinefloat/releases/download/v1.0/DeadlineFloat-1.0.zip">Zip instead</a>
+      </p>
+      <details class="sums">
+        <summary>Verify the download</summary>
+<pre>shasum -a 256 DeadlineFloat-1.0.dmg
+e9d396af3ed0c6b0ffc4d977bf9b1426f5f32ea0ad619c5583499d1744d016ae  DeadlineFloat-1.0.dmg
+a7cd8cb5be1b247f8884b19ffd65fd2b9474af6f72009215a0632fbb10e7b08f  DeadlineFloat-1.0.zip</pre>
+      </details>
+    </div>
+    <!-- download:end -->
     <div class="shot">
-      <img src="screenshots/dark.png" alt="The DeadlineFloat window showing overdue, today and tomorrow sections over a desktop">
+      <img src="screenshots/expanded.png" alt="The DeadlineFloat panel: the task list beside the day's timeline">
     </div>
   </header>
 
   <section>
     <h2>What it does</h2>
     <p class="lede">
-      DeadlineFloat sits above your other windows and follows you between Spaces, showing
-      today plus the next two, three or four calendar days — grouped into Overdue, Today,
-      Tomorrow, and then by weekday.
+      At rest DeadlineFloat is a 12-point sliver down the screen edge: the day as a ruler
+      with every event drawn as long as it lasts, a needle for now, and what is on — or
+      next — floating beside it with a live countdown. Rest the pointer on it, or click the
+      hourglass in the menu bar, and the panel slides out: the tasks on the left, the
+      calendar on the right, one column per day for one, two, three days or the week.
     </p>
     <div class="grid">
       <div class="card">
-        <h3>Only the things that are due</h3>
-        <p>Events whose titles start with <code>DUE</code> or <code>SUBMIT</code>, or contain <code>due</code> or <code>deadline</code>. Every keyword is editable, and <code>DONE</code> or <code>CANCELLED</code> items stay hidden.</p>
+        <h3>What is due, then what your day is</h3>
+        <p>Deadlines are events whose titles start with <code>DUE</code> or <code>SUBMIT</code>, or contain <code>due</code> or <code>deadline</code> — every keyword is editable. Today's schedule shows everything else too, with deadlines tagged; <code>DONE</code> or <code>CANCELLED</code> items stay hidden.</p>
       </div>
       <div class="card">
-        <h3>Real countdowns</h3>
-        <p>“2h 14m left”, updated continuously. All-day events say <em>All day</em> rather than inventing a time, and only go overdue once the day is actually over.</p>
+        <h3>Now, or next</h3>
+        <p>“HAPPENING NOW · 1 hr 13 min left” while you are in something; “DUE NEXT · in 2 hr 14 min” before the next thing. Whole minutes in words, never seconds, flipping exactly on the minute.</p>
       </div>
       <div class="card">
         <h3>Your Google colours</h3>
-        <p>Exactly the colour Google reports, per event or per calendar. Urgency shows up as an icon, a border and the countdown — never by overwriting the colour you chose.</p>
+        <p>Exactly the colour Google reports, per event or per calendar, as a bar beside each row and a glow behind the spotlight. Urgency shows up in the countdown's wording and colour — never by overwriting the colour you chose.</p>
+      </div>
+      <div class="card">
+        <h3>Swipe it done</h3>
+        <p>A two-finger swipe marks a deadline done, with a tap from the trackpad. Completed items wait in a drawer above the list — scroll up past the barrier to see them, swipe one back whenever you like.</p>
       </div>
       <div class="card">
         <h3>Never in the way</h3>
-        <p>A non-activating panel: clicking it never steals focus from what you are working in. Drag it anywhere; it remembers where. Adjustable text size and opacity, plus a compact mode.</p>
+        <p>Twelve points wide until you want it, and it never steals focus from what you are working in; pin it open while you work. One bar per display, on the left or right edge, or drop it down from the menu bar instead. Adjustable text size and opacity, compact rows, and it honours Reduce Transparency and Increase Contrast.</p>
       </div>
       <div class="card">
         <h3>Correct at the edges</h3>
@@ -171,13 +250,30 @@
   </section>
 
   <section>
-    <h2>Light, dark, compact</h2>
+    <h2>At rest, light, compact, first run</h2>
     <p class="lede">Liquid Glass on macOS 26 and later; a hand-built glass fallback down to macOS 14.</p>
     <div class="gallery">
-      <figure><img src="screenshots/light.png" alt="DeadlineFloat in light mode"><figcaption>Light</figcaption></figure>
-      <figure><img src="screenshots/compact.png" alt="DeadlineFloat in compact mode"><figcaption>Compact — title, time, colour</figcaption></figure>
+      <figure><img src="screenshots/bar.png" alt="The DeadlineFloat sliver at the screen edge with the next deadline's pill"><figcaption>At rest — the sliver and the next deadline</figcaption></figure>
+      <figure><img src="screenshots/light.png" alt="The DeadlineFloat bar open on three days, light mode"><figcaption>Three days, light</figcaption></figure>
+      <figure><img src="screenshots/compact.png" alt="The DeadlineFloat bar with compact rows"><figcaption>Compact — one line per deadline</figcaption></figure>
       <figure><img src="screenshots/welcome.png" alt="The DeadlineFloat sign-in screen"><figcaption>Setup is one button</figcaption></figure>
     </div>
+  </section>
+
+  <section>
+    <h2>Installing it</h2>
+    <p class="lede">Nothing to configure and no account to create. The whole setup is four steps.</p>
+    <ol class="steps">
+      <li>Open the disk image and drag <strong>DeadlineFloat</strong> into <strong>Applications</strong>. Launch at Login only works from there.</li>
+      <li>Open it. A sliver appears down the edge of each display and an hourglass in the menu bar. Rest the pointer on the sliver, or click the hourglass, to open the bar.</li>
+      <li>Press <strong>Sign in with Google</strong>. Your browser does the signing in — DeadlineFloat never sees your password.</li>
+      <li>Google asks to allow one thing: <em>see and download any calendar you can access</em>. That is the whole request.</li>
+    </ol>
+    <p class="meta" style="text-align:left;margin-top:16px">
+      Google shows a “Google hasn’t verified this app” notice on first sign-in while the app
+      is in review. Choose <strong>Advanced → Go to DeadlineFloat</strong> to continue; the
+      permission being granted is the read-only one above, whatever the notice says.
+    </p>
   </section>
 
   <section>

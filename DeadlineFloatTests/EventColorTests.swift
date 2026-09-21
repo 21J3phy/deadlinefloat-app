@@ -10,39 +10,54 @@ final class EventColorTests: XCTestCase {
 
     // MARK: - Precedence
 
-    func testEventColorIdWins() {
+    func testEventColorIdWinsAndIsTheColourGoogleCalendarShows() {
         let resolver = EventColorResolver(palette: livePalette)
         let entry = Fixture.calendarEntry(background: "#16a765")
         var event = Fixture.timedEvent(start: Date())
-        event.colorId = "11"
+        event.colorId = "11"   // Tomato: #dc2127 in the API, #D50000 in Google Calendar
 
         let resolution = resolver.resolve(event: event, calendarEntry: entry)
-        XCTAssertEqual(resolution.color.hexString, "#DC2127")
+        XCTAssertEqual(resolution.color.hexString, "#D50000")
         XCTAssertEqual(resolution.source, .event)
     }
 
     func testCalendarColorIsUsedWhenTheEventHasNone() {
         let resolver = EventColorResolver(palette: livePalette)
-        let entry = Fixture.calendarEntry(background: "#16a765")
+        let entry = Fixture.calendarEntry(background: "#16a765")   // Basil, as the API reports it
         let resolution = resolver.resolve(event: Fixture.timedEvent(start: Date()), calendarEntry: entry)
-        XCTAssertEqual(resolution.color.hexString, "#16A765")
+        XCTAssertEqual(resolution.color.hexString, "#0B8043", "drawn as Google Calendar draws Basil")
         XCTAssertEqual(resolution.source, .calendar)
     }
 
-    func testCalendarColorIdIsResolvedThroughThePalette() {
+    func testCalendarColorIdIsResolvedToTheColourGoogleCalendarShows() {
         let resolver = EventColorResolver(palette: livePalette)
-        let entry = Fixture.calendarEntry(background: nil, colorId: "16")
+        let entry = Fixture.calendarEntry(background: nil, colorId: "16")   // Blueberry
         let resolution = resolver.resolve(event: Fixture.timedEvent(start: Date()), calendarEntry: entry)
-        XCTAssertEqual(resolution.color.hexString, "#4986E7")
+        XCTAssertEqual(resolution.color.hexString, "#3F51B5")
         XCTAssertEqual(resolution.source, .calendar)
     }
 
-    func testFallsBackToGooglesPublishedPaletteWhenOffline() {
+    func testACustomCalendarColourIsKeptExactly() {
+        let resolver = EventColorResolver(palette: livePalette)
+        let entry = Fixture.calendarEntry(background: "#123456", colorId: nil)
+        let resolution = resolver.resolve(event: Fixture.timedEvent(start: Date()), calendarEntry: entry)
+        XCTAssertEqual(resolution.color.hexString, "#123456")
+    }
+
+    func testEveryAPIPresetHasAGoogleCalendarColour() {
+        for hex in Array(GooglePalette.apiCalendarBackgrounds.values) + Array(GooglePalette.apiEventBackgrounds.values) {
+            XCTAssertNotNil(GooglePalette.displayColorByAPIHex[hex.lowercased()], hex)
+        }
+        XCTAssertEqual(GooglePalette.calendarBackgrounds.count, 24)
+        XCTAssertEqual(GooglePalette.eventBackgrounds.count, 11)
+    }
+
+    func testFallsBackToTheBuiltInPaletteWhenOffline() {
         let resolver = EventColorResolver(palette: nil)
         var event = Fixture.timedEvent(start: Date())
         event.colorId = "5"   // Banana
         let resolution = resolver.resolve(event: event, calendarEntry: Fixture.calendarEntry(background: nil))
-        XCTAssertEqual(resolution.color.hexString, "#FBD75B")
+        XCTAssertEqual(resolution.color.hexString, "#F6BF26")
         XCTAssertEqual(resolution.source, .event)
     }
 
@@ -54,44 +69,50 @@ final class EventColorTests: XCTestCase {
         XCTAssertEqual(resolution.color, GooglePalette.fallback)
     }
 
-    func testUnknownEventColorIdFallsBackToThePublishedPalette() {
-        let resolver = EventColorResolver(palette: livePalette)
+    func testAnIdOnlyTheLivePaletteKnowsIsTranslatedByHex() {
+        let palette = GoogleColorsResponse(
+            updated: nil,
+            calendar: nil,
+            event: ["99": GoogleColorDefinition(background: "#dc2127", foreground: "#1d1d1d")]
+        )
+        let resolver = EventColorResolver(palette: palette)
         var event = Fixture.timedEvent(start: Date())
-        event.colorId = "3"   // Grape, absent from the live palette above
+        event.colorId = "99"
         let resolution = resolver.resolve(event: event, calendarEntry: Fixture.calendarEntry(background: nil))
-        XCTAssertEqual(resolution.color.hexString, "#DBADFF")
+        XCTAssertEqual(resolution.color.hexString, "#D50000", "the API hex for Tomato becomes Google Calendar's Tomato")
         XCTAssertEqual(resolution.source, .event)
     }
 
     // MARK: - Palette refresh
 
-    func testPaletteRefreshIsNeededWhenThereIsNoPalette() {
+    func testPaletteRefreshIsNotNeededForIdsTheBuiltInTablesKnow() {
         let resolver = EventColorResolver(palette: nil)
-        XCTAssertTrue(resolver.needsPaletteRefresh(events: [], calendars: []))
-    }
-
-    func testPaletteRefreshIsNeededForAnUnseenEventColorId() {
-        let resolver = EventColorResolver(palette: livePalette)
         var event = Fixture.timedEvent(start: Date())
         event.colorId = "7"
-        XCTAssertTrue(resolver.needsPaletteRefresh(events: [event], calendars: []))
+        let entry = Fixture.calendarEntry(background: nil, colorId: "23")
+        XCTAssertFalse(resolver.needsPaletteRefresh(events: [event], calendars: [entry]))
     }
 
-    func testPaletteRefreshIsNeededForAnUnseenCalendarColorId() {
+    func testPaletteRefreshIsNeededForAnIdNobodyKnows() {
         let resolver = EventColorResolver(palette: livePalette)
-        let entry = Fixture.calendarEntry(background: nil, colorId: "23")
+        var event = Fixture.timedEvent(start: Date())
+        event.colorId = "42"
+        XCTAssertTrue(resolver.needsPaletteRefresh(events: [event], calendars: []))
+        let entry = Fixture.calendarEntry(background: nil, colorId: "77")
         XCTAssertTrue(resolver.needsPaletteRefresh(events: [], calendars: [entry]))
     }
 
-    func testPaletteRefreshIsNotNeededWhenEverythingResolves() {
-        let resolver = EventColorResolver(palette: livePalette)
-        var event = Fixture.timedEvent(start: Date())
-        event.colorId = "11"
-        let entry = Fixture.calendarEntry(background: "#16a765", colorId: "99")
-        XCTAssertFalse(
-            resolver.needsPaletteRefresh(events: [event], calendars: [entry]),
-            "an explicit backgroundColor means the calendar's colorId never has to be looked up"
+    func testPaletteRefreshIsNotNeededWhenTheLivePaletteExplainsTheId() {
+        let palette = GoogleColorsResponse(
+            updated: nil,
+            calendar: ["77": GoogleColorDefinition(background: "#123456", foreground: nil)],
+            event: ["42": GoogleColorDefinition(background: "#654321", foreground: nil)]
         )
+        let resolver = EventColorResolver(palette: palette)
+        var event = Fixture.timedEvent(start: Date())
+        event.colorId = "42"
+        let entry = Fixture.calendarEntry(background: nil, colorId: "77")
+        XCTAssertFalse(resolver.needsPaletteRefresh(events: [event], calendars: [entry]))
     }
 
     // MARK: - Urgency must not change the colour
@@ -107,7 +128,7 @@ final class EventColorTests: XCTestCase {
 
         XCTAssertEqual(overdue.color, imminent.color)
         XCTAssertEqual(imminent.color, later.color)
-        XCTAssertEqual(overdue.color.hexString, "#16A765")
+        XCTAssertEqual(overdue.color.hexString, "#0B8043")
         XCTAssertNotEqual(overdue.urgency(now: now), later.urgency(now: now))
     }
 }
@@ -138,38 +159,11 @@ final class RGBColorTests: XCTestCase {
         XCTAssertEqual(RGBColor.white.contrastRatio(to: .white), 1, accuracy: 0.01)
     }
 
-    func testContrastAdjustmentLeavesReadableColoursAlone() {
-        let readable = RGBColor(hex: "#111111")!
-        XCTAssertEqual(readable.adjustedForContrast(against: .lightSurface, minimumContrast: 4.5), readable)
-    }
-
-    func testContrastAdjustmentLiftsDarkColoursOnDarkBackgrounds() {
-        let deepBlue = RGBColor(hex: "#1b2a80")!
-        let adjusted = deepBlue.adjustedForContrast(against: .darkSurface, minimumContrast: 4.5)
-        XCTAssertGreaterThanOrEqual(adjusted.contrastRatio(to: .darkSurface), 4.5)
-        XCTAssertGreaterThan(adjusted.relativeLuminance, deepBlue.relativeLuminance)
-    }
-
-    func testContrastAdjustmentDarkensPaleColoursOnLightBackgrounds() {
-        let paleYellow = RGBColor(hex: "#fbe983")!
-        let adjusted = paleYellow.adjustedForContrast(against: .lightSurface, minimumContrast: 4.5)
-        XCTAssertGreaterThanOrEqual(adjusted.contrastRatio(to: .lightSurface), 4.5)
-        XCTAssertLessThan(adjusted.relativeLuminance, paleYellow.relativeLuminance)
-    }
-
-    func testEveryGoogleColourCanBeMadeReadableOnBothAppearances() {
+    func testEveryGoogleCalendarColourParses() {
         let hexes = Array(GooglePalette.eventBackgrounds.values) + Array(GooglePalette.calendarBackgrounds.values)
         XCTAssertEqual(hexes.count, 35)
         for hex in hexes {
-            let color = RGBColor(hex: hex)
-            XCTAssertNotNil(color, hex)
-            for surface in [RGBColor.darkSurface, .lightSurface] {
-                let adjusted = color!.adjustedForContrast(against: surface, minimumContrast: 4.5)
-                XCTAssertGreaterThanOrEqual(
-                    adjusted.contrastRatio(to: surface), 4.49,
-                    "\(hex) is not readable on \(surface.hexString)"
-                )
-            }
+            XCTAssertNotNil(RGBColor(hex: hex), hex)
         }
     }
 

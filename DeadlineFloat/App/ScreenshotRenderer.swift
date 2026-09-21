@@ -8,21 +8,13 @@ import SwiftUI
 /// touching the keychain or contacting Google.
 ///
 /// These are renders rather than window-server captures: the live Liquid Glass
-/// material samples whatever is genuinely behind the window, which an offscreen
+/// material samples whatever is genuinely behind the bar, which an offscreen
 /// pass cannot reproduce, so the compatibility glass is used instead. Layout,
 /// type, spacing and every Google colour are exactly what the app draws.
 @MainActor
 enum ScreenshotRenderer {
-    struct Shot {
-        var name: String
-        var scheme: ColorScheme
-        var compact: Bool
-        var size: CGSize
-    }
-
-    static let panelSize = CGSize(width: 348, height: 524)
-    static let compactSize = CGSize(width: 348, height: 340)
-    static let settingsSize = CGSize(width: 680, height: 520)
+    static let barHeight: CGFloat = 640
+    static let settingsSize = CGSize(width: 740, height: 580)
     static let margin: CGFloat = 46
 
     static func renderAll(into directory: URL) {
@@ -36,37 +28,24 @@ enum ScreenshotRenderer {
         let environment = AppEnvironment(isDemo: true, defaults: previewDefaults(), clock: { reference })
         environment.viewModel.start()
 
-        let shots: [Shot] = [
-            Shot(name: "light", scheme: .light, compact: false, size: panelSize),
-            Shot(name: "dark", scheme: .dark, compact: false, size: panelSize),
-            Shot(name: "compact", scheme: .dark, compact: true, size: compactSize)
-        ]
-
-        for shot in shots {
-            environment.preferences.compactMode = shot.compact
-            environment.viewModel.rebuild()
-
-            let panel = RootView(
-                viewModel: environment.viewModel,
-                onHide: {},
-                onOpenSettings: {}
-            )
-            .frame(width: shot.size.width, height: shot.size.height)
-            .glassSurface(
-                in: RoundedRectangle(cornerRadius: Metrics.windowCornerRadius, style: .continuous),
-                variant: .window
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Metrics.windowCornerRadius, style: .continuous))
-            .shadow(color: .black.opacity(0.34), radius: 26, y: 12)
-
-            let staged = stage(panel, canvas: CGSize(width: shot.size.width + margin * 2, height: shot.size.height + margin * 2), scheme: shot.scheme)
-            write(staged, to: directory.appendingPathComponent("\(shot.name).png"))
-        }
+        // The sliver, with the pill beside it.
+        renderBar(environment, name: "bar", scheme: .dark, expanded: false, into: directory)
+        // The bar slid open, one day; then three.
+        renderBar(environment, name: "expanded", scheme: .dark, expanded: true, into: directory)
+        environment.preferences.range = .threeDays
+        environment.viewModel.rebuild()
+        renderBar(environment, name: "light", scheme: .light, expanded: true, into: directory)
+        environment.preferences.range = .oneDay
+        environment.viewModel.rebuild()
+        environment.preferences.compactMode = true
+        environment.viewModel.rebuild()
+        renderBar(environment, name: "compact", scheme: .dark, expanded: true, into: directory)
+        environment.preferences.compactMode = false
+        environment.viewModel.rebuild()
 
         // The first thing a new user sees: signed out, one button.
         renderWelcome(into: directory, reference: reference)
 
-        environment.preferences.compactMode = false
         let settingsPanes: [(name: String, pane: SettingsView.Pane, scheme: ColorScheme)] = [
             ("settings-light", .general, .light),
             ("settings-dark", .appearance, .dark),
@@ -76,7 +55,7 @@ enum ScreenshotRenderer {
         for entry in settingsPanes {
             let settings = SettingsView(viewModel: environment.viewModel, navigation: SettingsNavigation(pane: entry.pane))
                 .frame(width: settingsSize.width, height: settingsSize.height)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .shadow(color: .black.opacity(0.30), radius: 24, y: 10)
 
             let staged = stage(
@@ -92,8 +71,59 @@ enum ScreenshotRenderer {
 
     // MARK: - Private
 
+    private static func renderBar(_ environment: AppEnvironment, name: String, scheme: ColorScheme, expanded: Bool, into directory: URL) {
+        let viewModel = environment.viewModel
+        let state = EdgeBarState(isExpanded: expanded, isPinned: false, edge: .right)
+        let sliverWidth = CGFloat(viewModel.preferences.sliverWidth)
+        let barWidth = expanded ? Metrics.expandedBarWidth(for: viewModel.preferences.range) : Metrics.collapsedBarWidth(sliver: sliverWidth)
+        let canvasWidth = (expanded ? barWidth + margin : barWidth + Metrics.calloutWidth + 8) + margin
+
+        let bar = EdgeBarView(viewModel: viewModel, bar: state, isDocked: !expanded, onOpenSettings: {}, onTogglePin: {}, onExpand: {})
+            .frame(width: barWidth, height: barHeight)
+            .shadow(color: .black.opacity(0.34), radius: 26, y: 12)
+
+        // The pill floats beside the sliver at its tab's height, as the
+        // callout window does on screen.
+        let pill: AnyView
+        if !expanded, let focus = viewModel.focus {
+            let ruler = viewModel.ruler
+            let centre = ruler.contains(viewModel.now)
+                ? RulerGeometry.y(fraction: ruler.fraction(of: viewModel.now), height: barHeight)
+                : Metrics.rulerTopInset + 8
+            let top = min(barHeight - Metrics.calloutHeight - 4, max(4, centre - Metrics.calloutHeight / 2))
+            pill = AnyView(
+                FocusPillView(
+                    focus: focus,
+                    now: viewModel.now,
+                    formatter: viewModel.formatter,
+                    countdownFormatter: viewModel.countdownFormatter
+                )
+                .shadow(color: .black.opacity(0.30), radius: 14, y: 6)
+                .padding(.trailing, sliverWidth + 8)
+                .padding(.top, top)
+            )
+        } else {
+            pill = AnyView(EmptyView())
+        }
+
+        // The sliver sits flush with the right edge of the canvas, as it does
+        // on screen; the panel floats with a margin all round.
+        let staged = ZStack(alignment: .topTrailing) {
+            DesktopBackdrop(scheme: scheme)
+            bar
+                .padding(.vertical, margin)
+                .padding(.trailing, expanded ? margin : 0)
+            pill
+                .padding(.top, margin)
+        }
+        .frame(width: canvasWidth, height: barHeight + margin * 2, alignment: .topTrailing)
+        .environment(\.colorScheme, scheme)
+        .offscreenRendering()
+        write(staged, to: directory.appendingPathComponent("\(name).png"))
+    }
+
     /// The signed-out state, with a placeholder client ID in scratch defaults so
-    /// the panel shows the real sign-in prompt rather than the developer notice.
+    /// the bar shows the real sign-in prompt rather than the developer notice.
     private static func renderWelcome(into directory: URL, reference: Date) {
         let defaults = previewDefaults(suffix: ".welcome")
         defaults.set(
@@ -102,22 +132,7 @@ enum ScreenshotRenderer {
         )
         let environment = AppEnvironment(isDemo: true, defaults: defaults, clock: { reference })
         // Deliberately not started: no snapshot, not signed in.
-
-        let panel = RootView(viewModel: environment.viewModel, onHide: {}, onOpenSettings: {})
-            .frame(width: panelSize.width, height: 372)
-            .glassSurface(
-                in: RoundedRectangle(cornerRadius: Metrics.windowCornerRadius, style: .continuous),
-                variant: .window
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Metrics.windowCornerRadius, style: .continuous))
-            .shadow(color: .black.opacity(0.34), radius: 26, y: 12)
-
-        let staged = stage(
-            panel,
-            canvas: CGSize(width: panelSize.width + margin * 2, height: 372 + margin * 2),
-            scheme: .dark
-        )
-        write(staged, to: directory.appendingPathComponent("welcome.png"))
+        renderBar(environment, name: "welcome", scheme: .dark, expanded: true, into: directory)
     }
 
     /// A throwaway defaults domain, so rendering never disturbs real settings.

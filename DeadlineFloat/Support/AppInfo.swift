@@ -31,6 +31,30 @@ enum AppInfo {
             || ProcessInfo.processInfo.environment["DEADLINEFLOAT_DEMO"] == "1"
     }
 
+    /// `--settings` opens the settings window at launch; `--settings keywords`
+    /// opens it on a particular pane. Handy from the terminal:
+    /// `open -a DeadlineFloat --args --settings account`.
+    static var settingsPaneAtLaunch: String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let index = args.firstIndex(of: "--settings") else { return nil }
+        let next = args.index(after: index)
+        if next < args.endIndex, !args[next].hasPrefix("--") { return args[next].lowercased() }
+        return ""
+    }
+
+    /// `--open` starts with the panel already dropped down from the menu bar.
+    static var opensBarAtLaunch: Bool {
+        ProcessInfo.processInfo.arguments.contains("--open")
+    }
+
+    /// `--close-after <seconds>`: with `--open`, closes the bar again after
+    /// that long — for filming the close, which no script can hover.
+    static var closesBarAfter: TimeInterval? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let index = args.firstIndex(of: "--close-after"), index + 1 < args.count else { return nil }
+        return TimeInterval(args[index + 1])
+    }
+
     /// One-shot mode used by `Tools/make_screenshots.sh`: renders the interface
     /// to PNG files and exits.
     static var screenshotOutputDirectory: URL? {

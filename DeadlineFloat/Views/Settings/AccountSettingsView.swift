@@ -12,7 +12,7 @@ struct AccountSettingsView: View {
     private var configuration: GoogleClientConfig { preferences.clientConfiguration }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             connectionCard
             scopeCard
             advancedCard
@@ -30,54 +30,71 @@ struct AccountSettingsView: View {
 
     private var connectionCard: some View {
         SettingsCard(title: "Google account", footnote: connectionFootnote) {
-            HStack(spacing: 10) {
-                Image(systemName: viewModel.isSignedIn ? Symbols.allClear : Symbols.notSignedIn)
-                    .font(.system(size: 15))
-                    .foregroundStyle(viewModel.isSignedIn ? Color.green : Color.secondary)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(viewModel.isSignedIn ? "Connected" : "Not connected")
-                        .font(.system(size: 12, weight: .medium))
-                    if let account = viewModel.accountLabel {
-                        Text(account)
-                            .font(.system(size: 10.5))
-                            .foregroundStyle(.tertiary)
-                            .textSelection(.enabled)
+            SettingsBlock {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill((viewModel.isSignedIn ? Palette.success : Color.secondary).opacity(0.15))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: viewModel.isSignedIn ? Symbols.allClear : Symbols.notSignedIn)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(viewModel.isSignedIn ? Palette.success : Color.secondary)
                     }
-                }
 
-                Spacer(minLength: 8)
-
-                if viewModel.isSignedIn {
-                    Button("Disconnect") {
-                        isWorking = true
-                        Task {
-                            await viewModel.signOut()
-                            isWorking = false
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(viewModel.isSignedIn ? "Connected" : "Not connected")
+                            .font(.system(size: 13, weight: .medium))
+                        if let account = viewModel.accountLabel {
+                            Text(account)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        } else if !viewModel.isSignedIn {
+                            Text("Sign in to start seeing deadlines.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    .buttonStyle(GlassPillButtonStyle())
-                    .disabled(isWorking)
-                } else {
-                    GoogleSignInButton(isBusy: viewModel.isSigningIn) {
-                        Task { await viewModel.signIn() }
+
+                    Spacer(minLength: 8)
+
+                    if viewModel.isSignedIn {
+                        Button("Disconnect") {
+                            isWorking = true
+                            Task {
+                                await viewModel.signOut()
+                                isWorking = false
+                            }
+                        }
+                        .buttonStyle(SettingsButtonStyle())
+                        .disabled(isWorking)
+                    } else if viewModel.isSigningIn {
+                        HStack(spacing: 8) {
+                            GoogleSignInButton(isBusy: true) {}
+                            Button("Cancel") { viewModel.cancelSignIn() }
+                                .buttonStyle(SettingsButtonStyle())
+                        }
+                    } else {
+                        GoogleSignInButton(isBusy: false) {
+                            Task { await viewModel.signIn() }
+                        }
+                        .disabled(configuration.configurationProblem != nil)
                     }
-                    .disabled(configuration.configurationProblem != nil)
                 }
-            }
 
-            if let problem = configuration.configurationProblem {
-                Label(problem, systemImage: Symbols.serverProblem)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                if let problem = configuration.configurationProblem {
+                    Label(problem, systemImage: Symbols.serverProblem)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Palette.imminent)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-            if let message = viewModel.transientMessage {
-                Text(message)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let message = viewModel.transientMessage {
+                    Text(message)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Palette.imminent)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }
@@ -93,33 +110,38 @@ struct AccountSettingsView: View {
 
     private var scopeCard: some View {
         SettingsCard(title: "What DeadlineFloat can see") {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Google asks you to allow one thing:")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                Text("“\(GoogleEndpoints.scopeDescription)”")
-                    .font(.system(size: 12, weight: .medium))
-                Text(GoogleEndpoints.scope)
-                    .font(.system(size: 10).monospaced())
-                    .foregroundStyle(.tertiary)
-                    .textSelection(.enabled)
+            SettingsBlock {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Google asks you to allow one thing:")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Text("“\(GoogleEndpoints.scopeDescription)”")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(GoogleEndpoints.scope)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
             }
-
-            privacyLine("Read-only. The app can never create, change or delete an event — the network layer refuses any request to the Calendar API that is not a GET.")
-            privacyLine("Tokens are stored in the macOS Keychain, never on disk in the clear.")
-            privacyLine("The only hosts DeadlineFloat contacts are Google's own. Every other host is blocked in code.")
-            privacyLine("No analytics, no telemetry, no crash reporting. Calendar data never leaves this Mac except back to Google.")
+            SettingsSeparator()
+            SettingsBlock {
+                privacyLine("Read-only. The app can never create, change or delete an event — the network layer refuses any request to the Calendar API that is not a GET.")
+                privacyLine("Tokens are stored in the macOS Keychain, never on disk in the clear.")
+                privacyLine("The only hosts DeadlineFloat contacts are Google's own. Every other host is blocked in code.")
+                privacyLine("No analytics, no telemetry, no crash reporting. Calendar data never leaves this Mac except back to Google.")
+            }
         }
     }
 
     private func privacyLine(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 7) {
+        HStack(alignment: .top, spacing: 8) {
             Image(systemName: Symbols.allClear)
-                .font(.system(size: 10))
-                .foregroundStyle(Color.green.opacity(0.85))
-                .padding(.top, 2)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Palette.success)
+                .padding(.top, 1.5)
             Text(text)
-                .font(.system(size: 11))
+                .font(.system(size: 11.5))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -128,64 +150,68 @@ struct AccountSettingsView: View {
     // MARK: - Advanced
 
     private var advancedCard: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             Button {
-                showsAdvanced.toggle()
+                withAnimation(Motion.pane) { showsAdvanced.toggle() }
             } label: {
                 HStack(spacing: 5) {
-                    Image(systemName: showsAdvanced ? "chevron.down" : "chevron.right")
+                    Image(systemName: showsAdvanced ? Symbols.chevronDown : Symbols.chevronRight)
                         .font(.system(size: 9, weight: .bold))
+                        .frame(width: 10)
                     Text("ADVANCED")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .kerning(0.6)
+                        .font(.system(size: 10.5, weight: .bold))
+                        .kerning(0.7)
                     Spacer()
                 }
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .padding(.leading, 2)
 
             if showsAdvanced {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("DeadlineFloat ships with its own Google OAuth client, so there is normally nothing to do here. Override it only if you are building from source against your own Google Cloud project.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                SettingsCard {
+                    SettingsBlock {
+                        Text("DeadlineFloat ships with its own Google OAuth client, so there is normally nothing to do here. Override it only if you are building from source against your own Google Cloud project.")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(spacing: 6) {
-                        Text("Currently using")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
-                        Text(sourceLabel)
-                            .font(.system(size: 11, weight: .medium))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .glassSurface(in: Capsule(style: .continuous), variant: .chip)
-                    }
-
-                    field(title: "Client ID", placeholder: "123…\(GoogleClientConfig.clientIDSuffix)") {
-                        TextField("", text: $clientID)
-                    }
-
-                    field(title: "Client secret (optional)", placeholder: "usually not needed") {
-                        SecureField("", text: $clientSecret)
-                    }
-
-                    HStack(spacing: 8) {
-                        Button("Save override") { saveClient() }
-                            .buttonStyle(GlassPillButtonStyle(isProminent: true))
-                        Button("Use the built-in client") {
-                            clientID = ""
-                            clientSecret = ""
-                            saveClient()
+                        HStack(spacing: 6) {
+                            Text("Currently using")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                            Text(sourceLabel)
+                                .font(.system(size: 11, weight: .medium))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2.5)
+                                .glassSurface(in: Capsule(style: .continuous), variant: .chip)
                         }
-                        .buttonStyle(GlassPillButtonStyle())
-                        .disabled(preferences.googleClientID.isEmpty)
+                        .padding(.bottom, 4)
+
+                        field(title: "Client ID", placeholder: "123…\(GoogleClientConfig.clientIDSuffix)") {
+                            TextField("", text: $clientID)
+                        }
+
+                        field(title: "Client secret (optional)", placeholder: "usually not needed") {
+                            SecureField("", text: $clientSecret)
+                        }
+
+                        HStack(spacing: 8) {
+                            Button("Save override") { saveClient() }
+                                .buttonStyle(SettingsButtonStyle(isProminent: true))
+                            Button("Use the built-in client") {
+                                clientID = ""
+                                clientSecret = ""
+                                saveClient()
+                            }
+                            .buttonStyle(SettingsButtonStyle())
+                            .disabled(preferences.googleClientID.isEmpty)
+                        }
+                        .padding(.top, 4)
                     }
                 }
-                .padding(13)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .glassSurface(in: RoundedRectangle(cornerRadius: 13, style: .continuous), variant: .card)
+                .transition(.opacity)
             }
         }
     }
@@ -204,11 +230,11 @@ struct AccountSettingsView: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
             content()
-                .font(.system(size: 12).monospaced())
+                .font(.system(size: 12))
                 .glassField()
             Text(placeholder)
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
         }
     }
 

@@ -3,30 +3,40 @@ import SwiftUI
 /// A scalable type ramp.
 ///
 /// Every font in the app comes from here so the "Text size" preference scales
-/// the whole interface coherently instead of only a few labels.
+/// the whole interface coherently instead of only a few labels. Numbers are set
+/// in the rounded design with monospaced digits, so countdowns tick without the
+/// text shifting sideways.
 struct AppTypography: Equatable, Sendable {
     var scale: CGFloat = 1.0
 
     private func pt(_ base: CGFloat) -> CGFloat { (base * scale * 2).rounded() / 2 }
 
-    var headerTitle: Font { .system(size: pt(13), weight: .semibold, design: .rounded) }
-    var headerSubtitle: Font { .system(size: pt(10), weight: .medium, design: .rounded) }
-    var segment: Font { .system(size: pt(11), weight: .semibold, design: .rounded) }
-    var sectionHeader: Font { .system(size: pt(10), weight: .bold, design: .rounded) }
-    var rowTitle: Font { .system(size: pt(13), weight: .semibold) }
-    var rowTitleCompact: Font { .system(size: pt(12), weight: .medium) }
-    var rowMeta: Font { .system(size: pt(11), weight: .medium) }
-    var rowTime: Font { .system(size: pt(11), weight: .semibold).monospacedDigit() }
-    var countdown: Font { .system(size: pt(10.5), weight: .semibold, design: .rounded).monospacedDigit() }
-    var footnote: Font { .system(size: pt(10), weight: .medium) }
-    var emptyTitle: Font { .system(size: pt(13), weight: .semibold, design: .rounded) }
-    var emptyBody: Font { .system(size: pt(11), weight: .regular) }
-    var settingsTitle: Font { .system(size: pt(15), weight: .semibold, design: .rounded) }
+    // Chrome
+    var segment: Font { .system(size: pt(11.5), weight: .semibold) }
+    var sectionHeader: Font { .system(size: pt(10.5), weight: .bold) }
+    var footnote: Font { .system(size: pt(10.5), weight: .medium) }
 
-    var iconSize: CGFloat { pt(11) }
+    // Rows
+    var rowTitle: Font { .system(size: pt(13), weight: .semibold) }
+    var rowTitleCompact: Font { .system(size: pt(12.5), weight: .medium) }
+    var rowMeta: Font { .system(size: pt(11), weight: .medium) }
+    var rowTime: Font { .system(size: pt(12), weight: .semibold).monospacedDigit() }
+    var countdown: Font { .system(size: pt(11), weight: .semibold).monospacedDigit() }
+
+    // Spotlight
+    var spotlightEyebrow: Font { .system(size: pt(10), weight: .bold) }
+    var spotlightTitle: Font { .system(size: pt(15.5), weight: .semibold) }
+    var spotlightCountdown: Font { .system(size: pt(24), weight: .semibold).monospacedDigit() }
+    var spotlightWhen: Font { .system(size: pt(11), weight: .medium) }
+
+    // Empty and sign-in states
+    var emptyTitle: Font { .system(size: pt(15), weight: .semibold) }
+    var emptyBody: Font { .system(size: pt(11.5), weight: .regular) }
+
+    var iconSize: CGFloat { pt(11.5) }
     var dotSize: CGFloat { pt(7) }
     var rowVerticalPadding: CGFloat { pt(7) }
-    var rowVerticalPaddingCompact: CGFloat { pt(4) }
+    var rowVerticalPaddingCompact: CGFloat { pt(4.5) }
     var lineGap: CGFloat { pt(2.5) }
 }
 

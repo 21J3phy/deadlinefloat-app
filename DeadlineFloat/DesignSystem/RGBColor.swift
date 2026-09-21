@@ -6,7 +6,8 @@ import SwiftUI
 /// Google returns every calendar and event colour as a `#rrggbb` string, so the
 /// app keeps colours in this value type: it is `Codable` (for the offline
 /// cache), `Sendable`, and — unlike `SwiftUI.Color` — its components can be read
-/// back for contrast maths on macOS 14.
+/// back, which the tests use to check every published Google colour parses and
+/// mixes predictably.
 struct RGBColor: Hashable, Sendable, Codable {
     var red: Double
     var green: Double
@@ -87,45 +88,8 @@ struct RGBColor: Hashable, Sendable, Codable {
     func lightened(by amount: Double) -> RGBColor { mixed(with: .white, amount: amount) }
     func darkened(by amount: Double) -> RGBColor { mixed(with: .black, amount: amount) }
 
-    /// Nudges the colour towards white or black until it reaches `minimumContrast`
-    /// against `background`, preserving hue.
-    ///
-    /// Used only for *text* tinted with a Google colour. Dots and stripes keep the
-    /// unmodified colour so the Google Calendar identity is never lost.
-    func adjustedForContrast(against background: RGBColor, minimumContrast: Double = 4.5) -> RGBColor {
-        guard contrastRatio(to: background) < minimumContrast else { return self }
-
-        // Move away from the background: lighten on dark backgrounds, darken on light ones.
-        let target: RGBColor = background.relativeLuminance < 0.5 ? .white : .black
-        var low = 0.0
-        var high = 1.0
-        var best = mixed(with: target, amount: 1.0)
-
-        // 12 bisection steps land within ~0.02% of the minimum viable blend.
-        for _ in 0..<12 {
-            let mid = (low + high) / 2
-            let candidate = mixed(with: target, amount: mid)
-            if candidate.contrastRatio(to: background) >= minimumContrast {
-                best = candidate
-                high = mid
-            } else {
-                low = mid
-            }
-        }
-        return best
-    }
-
     static let white = RGBColor(red: 1, green: 1, blue: 1)
     static let black = RGBColor(red: 0, green: 0, blue: 0)
-
-    /// Approximate backdrop luminance behind the panel content, per appearance.
-    /// The panel is translucent, so these are the effective blended surfaces.
-    static let darkSurface = RGBColor(red: 0.13, green: 0.13, blue: 0.15)
-    static let lightSurface = RGBColor(red: 0.93, green: 0.93, blue: 0.95)
-
-    static func surface(for scheme: ColorScheme) -> RGBColor {
-        scheme == .dark ? .darkSurface : .lightSurface
-    }
 }
 
 private extension Double {

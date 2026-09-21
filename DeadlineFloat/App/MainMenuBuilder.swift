@@ -25,7 +25,7 @@ enum MainMenuBuilder {
         refresh.target = target
         appMenu.addItem(refresh)
 
-        let toggle = NSMenuItem(title: "Show or Hide Window", action: #selector(AppDelegate.toggleWindow), keyEquivalent: "w")
+        let toggle = NSMenuItem(title: "Show or Hide Deadlines", action: #selector(AppDelegate.togglePanel), keyEquivalent: "w")
         toggle.target = target
         appMenu.addItem(toggle)
 
@@ -57,10 +57,6 @@ enum MainMenuBuilder {
         let windowMenu = NSMenu(title: "Window")
         windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         windowMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "W")
-        windowMenu.addItem(.separator())
-        let resetPosition = NSMenuItem(title: "Reset Window Position", action: #selector(AppDelegate.resetWindowPosition), keyEquivalent: "")
-        resetPosition.target = target
-        windowMenu.addItem(resetPosition)
         windowMenuItem.submenu = windowMenu
         mainMenu.addItem(windowMenuItem)
 

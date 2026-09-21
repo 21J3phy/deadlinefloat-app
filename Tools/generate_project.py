@@ -27,6 +27,8 @@ DEPLOYMENT_TARGET = "14.0"
 SWIFT_VERSION = "6.0"
 MARKETING_VERSION = "1.0"
 BUILD_VERSION = "1"
+# Shown in About and in the Finder's Get Info panel.
+COPYRIGHT = "Copyright © 2026 Nirav Surabhi"
 
 # Directories that hold compiled sources / resources, relative to ROOT.
 SOURCE_ROOTS = [APP_NAME, TEST_NAME]
@@ -197,7 +199,7 @@ APP_SETTINGS_COMMON = {
     "GENERATE_INFOPLIST_FILE": "YES",
     "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.productivity",
     "INFOPLIST_KEY_LSUIElement": "YES",
-    "INFOPLIST_KEY_NSHumanReadableCopyright": "",
+    "INFOPLIST_KEY_NSHumanReadableCopyright": COPYRIGHT,
     "MARKETING_VERSION": MARKETING_VERSION,
     "PRODUCT_BUNDLE_IDENTIFIER": BUNDLE_ID,
     "PRODUCT_NAME": "$(TARGET_NAME)",

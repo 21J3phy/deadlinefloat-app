@@ -83,6 +83,10 @@ struct Deadline: Identifiable, Hashable, Sendable {
     /// Other calendars carrying the very same event, when duplicates were merged.
     var additionalCalendarNames: [String] = []
 
+    /// True when the title matched the deadline rules. Items in the day's
+    /// schedule that are merely events — a lecture, a meeting — are `false`.
+    var isDeadline: Bool = true
+
     var isAllDay: Bool {
         if case .allDay = timing { return true }
         return false

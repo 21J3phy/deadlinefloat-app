@@ -11,38 +11,39 @@ struct CalendarsSettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             if viewModel.calendars.isEmpty {
                 SettingsCard(title: "Calendars") {
-                    Text(viewModel.isSignedIn
-                         ? "No calendars loaded yet. Refresh the window to fetch your calendar list."
-                         : "Connect a Google account to choose calendars.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                    SettingsBlock {
+                        Text(viewModel.isSignedIn
+                             ? "No calendars loaded yet. Refresh the window to fetch your calendar list."
+                             : "Connect a Google account to choose calendars.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else {
                 SettingsCard(
                     title: "Included calendars",
                     footnote: "Unticked calendars are never requested, so their events never leave Google."
                 ) {
-                    ForEach(viewModel.calendars) { entry in
+                    ForEach(Array(viewModel.calendars.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 { SettingsSeparator() }
                         calendarRow(entry)
-                        if entry.id != viewModel.calendars.last?.id {
-                            Divider().overlay(Color.hairline)
-                        }
                     }
                 }
 
                 HStack(spacing: 8) {
                     Button("Select all") { setAll(true) }
-                        .buttonStyle(GlassPillButtonStyle())
+                        .buttonStyle(SettingsButtonStyle())
                     Button("Select none") { setAll(false) }
-                        .buttonStyle(GlassPillButtonStyle())
+                        .buttonStyle(SettingsButtonStyle())
                     Button("Match Google Calendar") {
                         preferences.selectedCalendarIDs = nil
                         viewModel.calendarSelectionChanged()
                     }
-                    .buttonStyle(GlassPillButtonStyle())
+                    .buttonStyle(SettingsButtonStyle())
+                    .disabled(preferences.selectedCalendarIDs == nil)
                     .help("Follow whichever calendars are ticked in Google Calendar itself")
                 }
             }
@@ -50,19 +51,19 @@ struct CalendarsSettingsView: View {
     }
 
     private func calendarRow(_ entry: GoogleCalendarListEntry) -> some View {
-        HStack(spacing: 9) {
-            ColorDot(color: resolver.calendarColor(entry))
+        HStack(spacing: 11) {
+            ColorDot(color: resolver.calendarColor(entry), size: 11)
 
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(entry.displayName)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13))
                     .lineLimit(1)
                 HStack(spacing: 5) {
                     if entry.primary == true {
-                        Text("Primary").font(.system(size: 10)).foregroundStyle(.tertiary)
+                        Text("Primary").font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                     if let role = entry.accessRole {
-                        Text(role.capitalized).font(.system(size: 10)).foregroundStyle(.tertiary)
+                        Text(role.capitalized).font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -78,8 +79,9 @@ struct CalendarsSettingsView: View {
             ))
             .labelsHidden()
             .toggleStyle(.glassSwitch)
-            .controlSize(.small)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .accessibilityElement(children: .combine)
     }
 

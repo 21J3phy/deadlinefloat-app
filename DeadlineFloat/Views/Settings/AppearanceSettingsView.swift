@@ -6,9 +6,21 @@ struct AppearanceSettingsView: View {
     private var preferences: Preferences { viewModel.preferences }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SettingsCard(title: "Density") {
-                SettingsRow(title: "Compact mode", subtitle: "Shows only the title, time and colour.") {
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsCard(title: "Layout") {
+                SettingsRow(
+                    title: "Now / next card",
+                    subtitle: "What is happening now and how long it has left, or what is next and how long until it."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { preferences.showSpotlight },
+                        set: { preferences.showSpotlight = $0 }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.glassSwitch)
+                }
+                SettingsSeparator()
+                SettingsRow(title: "Compact rows", subtitle: "One line per deadline: title, countdown and time.") {
                     Toggle("", isOn: Binding(
                         get: { preferences.compactMode },
                         set: { preferences.compactMode = $0 }
@@ -16,12 +28,44 @@ struct AppearanceSettingsView: View {
                     .labelsHidden()
                     .toggleStyle(.glassSwitch)
                 }
+            }
 
-                SettingsRow(title: "Text size", subtitle: "Scales the whole window, not just the titles.") {
+            SettingsCard(title: "Bar", footnote: "The sliver at the screen edge. Titles go on blocks long enough to carry them, top to bottom like a spine.") {
+                SettingsRow(title: "Width") {
+                    HStack(spacing: 8) {
+                        Image(systemName: Symbols.barWidth)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                        GlassSlider(
+                            value: Binding(
+                                get: { preferences.sliverWidth },
+                                set: { preferences.sliverWidth = $0.rounded() }
+                            ),
+                            range: Preferences.sliverWidthRange
+                        )
+                        Text("\(Int(preferences.sliverWidth.rounded())) pt")
+                            .font(.system(size: 11).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 38, alignment: .trailing)
+                    }
+                }
+                SettingsSeparator()
+                SettingsRow(title: "Event titles", subtitle: "Run each event's title along its block on the bar.") {
+                    Toggle("", isOn: Binding(
+                        get: { preferences.sliverShowsTitles },
+                        set: { preferences.sliverShowsTitles = $0 }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.glassSwitch)
+                }
+            }
+
+            SettingsCard(title: "Type", footnote: "Scales the whole panel, not just the titles.") {
+                SettingsRow(title: "Text size") {
                     HStack(spacing: 8) {
                         Image(systemName: Symbols.textSize)
                             .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                         GlassSlider(
                             value: Binding(
                                 get: { preferences.textScale },
@@ -29,7 +73,7 @@ struct AppearanceSettingsView: View {
                             ),
                             range: Preferences.textScaleRange
                         )
-                        Text("\(Int(preferences.textScale * 100))%")
+                        Text("\(Int((preferences.textScale * 100).rounded()))%")
                             .font(.system(size: 11).monospacedDigit())
                             .foregroundStyle(.secondary)
                             .frame(width: 38, alignment: .trailing)
@@ -38,14 +82,16 @@ struct AppearanceSettingsView: View {
             }
 
             SettingsCard(
-                title: "Window",
-                footnote: "Lower opacity lets the desktop show through while the text stays readable."
+                title: "Panel",
+                footnote: Runtime.supportsLiquidGlass
+                    ? "The panel is Liquid Glass and already shows what is behind it; lower opacity fades the whole panel."
+                    : "Lower opacity lets the desktop show through while the text stays readable."
             ) {
-                SettingsRow(title: "Window opacity") {
+                SettingsRow(title: "Opacity") {
                     HStack(spacing: 8) {
                         Image(systemName: Symbols.opacity)
                             .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                         GlassSlider(
                             value: Binding(
                                 get: { preferences.windowOpacity },
@@ -53,26 +99,11 @@ struct AppearanceSettingsView: View {
                             ),
                             range: Preferences.opacityRange
                         )
-                        Text("\(Int(preferences.windowOpacity * 100))%")
+                        Text("\(Int((preferences.windowOpacity * 100).rounded()))%")
                             .font(.system(size: 11).monospacedDigit())
                             .foregroundStyle(.secondary)
                             .frame(width: 38, alignment: .trailing)
                     }
-                }
-            }
-
-            SettingsCard(
-                title: "Material",
-                footnote: Runtime.supportsLiquidGlass
-                    ? "This Mac renders the native Liquid Glass material."
-                    : "Liquid Glass needs macOS 26. On this Mac DeadlineFloat draws its layered glass fallback instead."
-            ) {
-                HStack(spacing: 10) {
-                    Image(systemName: Runtime.supportsLiquidGlass ? Symbols.allClear : Symbols.about)
-                        .foregroundStyle(Runtime.supportsLiquidGlass ? Color.green : Color.secondary)
-                    Text(Runtime.supportsLiquidGlass ? "Liquid Glass active" : "Compatibility glass active")
-                        .font(.system(size: 12, weight: .medium))
-                    Spacer()
                 }
             }
         }

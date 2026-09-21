@@ -20,26 +20,72 @@ final class PreferencesTests: XCTestCase {
 
     func testDefaults() {
         let preferences = Preferences(defaults: defaults)
-        XCTAssertEqual(preferences.range, .threeDays)
+        XCTAssertEqual(preferences.range, .oneDay)
         XCTAssertEqual(preferences.overdueLookbackDays, 0)
         XCTAssertEqual(preferences.refreshIntervalMinutes, 5, "the brief asks for a five-minute refresh")
         XCTAssertEqual(preferences.textScale, 1.0)
+        XCTAssertEqual(preferences.sliverWidth, 12)
+        XCTAssertFalse(preferences.sliverShowsTitles)
         XCTAssertEqual(preferences.windowOpacity, 1.0)
         XCTAssertFalse(preferences.compactMode)
         XCTAssertFalse(preferences.showAllEvents)
         XCTAssertTrue(preferences.mergeDuplicates)
         XCTAssertTrue(preferences.floatAboveFullScreen)
         XCTAssertFalse(preferences.showInDock)
+        XCTAssertTrue(preferences.showSpotlight)
+        XCTAssertFalse(preferences.menuBarShowsCountdown)
+        XCTAssertEqual(preferences.edge, .right)
+        XCTAssertTrue(preferences.showsEdgeBar, "the bar lives at the screen edge unless turned off")
         XCTAssertNil(preferences.selectedCalendarIDs)
         XCTAssertEqual(preferences.filter, .default)
+    }
+
+    func testSpotlightAndMenuBarChoicesSurviveRelaunch() {
+        do {
+            let preferences = Preferences(defaults: defaults)
+            preferences.showSpotlight = false
+            preferences.menuBarShowsCountdown = true
+            preferences.edge = .left
+            preferences.showsEdgeBar = false
+        }
+        let reloaded = Preferences(defaults: defaults)
+        XCTAssertFalse(reloaded.showSpotlight)
+        XCTAssertTrue(reloaded.menuBarShowsCountdown)
+        XCTAssertEqual(reloaded.edge, .left)
+        XCTAssertFalse(reloaded.showsEdgeBar)
+    }
+
+    func testCompletedDeadlinesPersistAndCanBeUndone() {
+        do {
+            let preferences = Preferences(defaults: defaults)
+            XCTAssertTrue(preferences.completedDeadlines.isEmpty)
+            preferences.markCompleted("cal|a", at: Date())
+            preferences.markCompleted("cal|b", at: Date())
+            preferences.markNotCompleted("cal|a")
+            XCTAssertFalse(preferences.isCompleted("cal|a"))
+            XCTAssertTrue(preferences.isCompleted("cal|b"))
+        }
+        let reloaded = Preferences(defaults: defaults)
+        XCTAssertEqual(Array(reloaded.completedDeadlines.keys), ["cal|b"])
+    }
+
+    func testStaleCompletionsArePrunedOnLoad() {
+        do {
+            let preferences = Preferences(defaults: defaults)
+            preferences.markCompleted("cal|fresh", at: Date())
+            preferences.markCompleted("cal|stale", at: Date().addingTimeInterval(-Preferences.completedRetention - 60))
+        }
+        let reloaded = Preferences(defaults: defaults)
+        XCTAssertTrue(reloaded.isCompleted("cal|fresh"))
+        XCTAssertFalse(reloaded.isCompleted("cal|stale"))
     }
 
     func testRangeSurvivesRelaunch() {
         do {
             let preferences = Preferences(defaults: defaults)
-            preferences.range = .fourDays
+            preferences.range = .week
         }
-        XCTAssertEqual(Preferences(defaults: defaults).range, .fourDays)
+        XCTAssertEqual(Preferences(defaults: defaults).range, .week)
     }
 
     func testEveryRangeOptionRoundTrips() {
@@ -103,6 +149,10 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.textScale, Preferences.textScaleRange.upperBound)
         preferences.textScale = 0
         XCTAssertEqual(preferences.textScale, Preferences.textScaleRange.lowerBound)
+        preferences.sliverWidth = 100
+        XCTAssertEqual(preferences.sliverWidth, Preferences.sliverWidthRange.upperBound)
+        preferences.sliverWidth = 1
+        XCTAssertEqual(preferences.sliverWidth, Preferences.sliverWidthRange.lowerBound)
 
         preferences.windowOpacity = 2
         XCTAssertEqual(preferences.windowOpacity, 1.0)
@@ -125,16 +175,6 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.refreshInterval, 300)
         preferences.refreshIntervalMinutes = 15
         XCTAssertEqual(preferences.refreshInterval, 900)
-    }
-
-    func testWindowFrameRoundTrips() {
-        let frame = NSRect(x: 120, y: 340, width: 360, height: 480)
-        do {
-            let preferences = Preferences(defaults: defaults)
-            preferences.windowFrameDescription = NSStringFromRect(frame)
-        }
-        let restored = Preferences(defaults: defaults).windowFrameDescription
-        XCTAssertEqual(NSRectFromString(restored ?? ""), frame)
     }
 
     func testClientOverrideIsTrimmedAndClearable() {

@@ -8,7 +8,7 @@ struct DeadlineGrouper: Sendable {
     let formatter: DeadlineFormatter
 
     func sections(from deadlines: [Deadline], now: Date, window: DateWindow) -> [DeadlineSection] {
-        let visible = deadlines.compactMap { clampToWindow($0, window: window, now: now) }
+        let visible = visible(deadlines, window: window, now: now)
 
         var overdue: [Deadline] = []
         var upcoming: [Deadline] = []
@@ -59,6 +59,11 @@ struct DeadlineGrouper: Sendable {
             if titleOrder != .orderedSame { return titleOrder == .orderedAscending }
             return lhs.id < rhs.id
         }
+    }
+
+    /// The deadlines that fall inside the window, in their original order.
+    func visible(_ deadlines: [Deadline], window: DateWindow, now: Date) -> [Deadline] {
+        deadlines.compactMap { clampToWindow($0, window: window, now: now) }
     }
 
     // MARK: - Private

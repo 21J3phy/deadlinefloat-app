@@ -1,28 +1,25 @@
 import AppKit
 
-/// The menu-bar item: left-click toggles the window, right-click opens a menu.
+/// The menu-bar item: left-click drops the panel down, right-click opens a menu.
 @MainActor
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
-    private let onToggleWindow: () -> Void
+    private let onTogglePanel: () -> Void
     private let onRefresh: () -> Void
     private let onOpenSettings: () -> Void
-    private let onResetPosition: () -> Void
-    private let isWindowVisible: () -> Bool
+    private let isPanelVisible: () -> Bool
 
     init(
-        onToggleWindow: @escaping () -> Void,
+        onTogglePanel: @escaping () -> Void,
         onRefresh: @escaping () -> Void,
         onOpenSettings: @escaping () -> Void,
-        onResetPosition: @escaping () -> Void,
-        isWindowVisible: @escaping () -> Bool
+        isPanelVisible: @escaping () -> Bool
     ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        self.onToggleWindow = onToggleWindow
+        self.onTogglePanel = onTogglePanel
         self.onRefresh = onRefresh
         self.onOpenSettings = onOpenSettings
-        self.onResetPosition = onResetPosition
-        self.isWindowVisible = isWindowVisible
+        self.isPanelVisible = isPanelVisible
         super.init()
 
         if let button = statusItem.button {
@@ -35,9 +32,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             button.target = self
             button.action = #selector(handleClick)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            button.toolTip = "DeadlineFloat — click to show or hide the window"
+            button.toolTip = "DeadlineFloat — click for your deadlines"
         }
     }
+
+    /// The icon's frame in screen coordinates, for anchoring the panel.
+    var buttonScreenFrame: NSRect? {
+        guard let button = statusItem.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
+    var window: NSWindow? { statusItem.button?.window }
 
     /// Called when the app is shutting down. The status item otherwise lives for
     /// the whole session, so there is nothing to tear down in `deinit`.
@@ -45,14 +50,34 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         NSStatusBar.system.removeStatusItem(statusItem)
     }
 
-    /// Shows the overdue count beside the icon when there is one, and nothing
-    /// otherwise — the menu bar stays quiet when you are on top of things.
-    func update(overdueCount: Int) {
+    /// Shows the overdue count beside the icon when there is one, and — if the
+    /// user asked for it — the countdown to the next deadline. With neither the
+    /// menu bar stays quiet.
+    func update(overdueCount: Int, countdown: String?) {
         guard let button = statusItem.button else { return }
-        button.title = overdueCount > 0 ? " \(overdueCount)" : ""
-        button.toolTip = overdueCount > 0
-            ? "DeadlineFloat — \(overdueCount) overdue"
-            : "DeadlineFloat — click to show or hide the window"
+
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .medium)
+        let title = NSMutableAttributedString()
+        if overdueCount > 0 {
+            title.append(NSAttributedString(
+                string: " \(overdueCount)",
+                attributes: [.font: font, .foregroundColor: NSColor.systemRed]
+            ))
+        }
+        if let countdown, !countdown.isEmpty {
+            title.append(NSAttributedString(
+                string: overdueCount > 0 ? " · \(countdown)" : " \(countdown)",
+                attributes: [.font: font, .foregroundColor: NSColor.labelColor]
+            ))
+        }
+        button.attributedTitle = title
+
+        var tips: [String] = []
+        if overdueCount > 0 { tips.append("\(overdueCount) overdue") }
+        if let countdown, !countdown.isEmpty { tips.append("next deadline in \(countdown)") }
+        button.toolTip = tips.isEmpty
+            ? "DeadlineFloat — click for your deadlines"
+            : "DeadlineFloat — " + tips.joined(separator: ", ")
     }
 
     // MARK: - Actions
@@ -64,7 +89,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         if isRightClick {
             presentMenu()
         } else {
-            onToggleWindow()
+            onTogglePanel()
         }
     }
 
@@ -73,8 +98,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.delegate = self
 
         let toggle = NSMenuItem(
-            title: isWindowVisible() ? "Hide Window" : "Show Window",
-            action: #selector(menuToggleWindow),
+            title: isPanelVisible() ? "Close Deadlines" : "Open Deadlines",
+            action: #selector(menuTogglePanel),
             keyEquivalent: ""
         )
         toggle.target = self
@@ -85,10 +110,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(refresh)
 
         menu.addItem(.separator())
-
-        let reset = NSMenuItem(title: "Reset Window Position", action: #selector(menuResetPosition), keyEquivalent: "")
-        reset.target = self
-        menu.addItem(reset)
 
         let settings = NSMenuItem(title: "Settings…", action: #selector(menuSettings), keyEquivalent: ",")
         settings.target = self
@@ -111,10 +132,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         statusItem.menu = nil
     }
 
-    @objc private func menuToggleWindow() { onToggleWindow() }
+    @objc private func menuTogglePanel() { onTogglePanel() }
     @objc private func menuRefresh() { onRefresh() }
     @objc private func menuSettings() { onOpenSettings() }
-    @objc private func menuResetPosition() { onResetPosition() }
     @objc private func menuQuit() { NSApp.terminate(nil) }
 
     @objc private func menuToggleLaunchAtLogin() {

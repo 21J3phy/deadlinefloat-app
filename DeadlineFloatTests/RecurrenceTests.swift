@@ -131,7 +131,7 @@ final class RecurrenceTests: XCTestCase {
         ).sections(from: deadlines, now: now, window: window)
 
         XCTAssertEqual(sections.flatMap(\.deadlines).count, 3)
-        XCTAssertEqual(sections.map(\.title), ["Today", "Tomorrow", "Friday, September 4"])
+        XCTAssertEqual(sections.map(\.title), ["Due today", "Due tomorrow", "Friday, September 4"])
     }
 
     func testDuplicateReducerDoesNotMergeDifferentInstancesOfOneSeries() {

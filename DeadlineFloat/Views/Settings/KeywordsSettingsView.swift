@@ -7,8 +7,8 @@ struct KeywordsSettingsView: View {
     private var preferences: Preferences { viewModel.preferences }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SettingsCard(title: "Mode") {
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsCard(title: "Matching") {
                 SettingsRow(
                     title: "Show all calendar events",
                     subtitle: "Ignores the include list. Excluded keywords still apply."
@@ -20,7 +20,7 @@ struct KeywordsSettingsView: View {
                     .labelsHidden()
                     .toggleStyle(.glassSwitch)
                 }
-
+                SettingsSeparator()
                 SettingsRow(
                     title: "Match whole words only",
                     subtitle: "Keeps “due” from matching “residue”."
@@ -32,7 +32,7 @@ struct KeywordsSettingsView: View {
                     .labelsHidden()
                     .toggleStyle(.glassSwitch)
                 }
-
+                SettingsSeparator()
                 SettingsRow(title: "Hide events you have declined") {
                     Toggle("", isOn: Binding(
                         get: { preferences.filter.hideDeclinedEvents },
@@ -68,9 +68,8 @@ struct KeywordsSettingsView: View {
                 viewModel.filterChanged()
             } label: {
                 Label("Restore default keywords", systemImage: Symbols.reset)
-                    .font(.system(size: 12))
             }
-            .buttonStyle(GlassPillButtonStyle())
+            .buttonStyle(SettingsButtonStyle())
         }
     }
 
@@ -81,18 +80,17 @@ struct KeywordsSettingsView: View {
         isDisabled: Bool
     ) -> some View {
         SettingsCard(title: title, footnote: footnote) {
-            ForEach(rules.wrappedValue) { rule in
-                if let index = rules.wrappedValue.firstIndex(where: { $0.id == rule.id }) {
-                    HStack(spacing: 8) {
-                        Picker("", selection: rules[index].mode) {
-                            ForEach(KeywordRule.Mode.allCases) { mode in
-                                Text(mode.label).tag(mode)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 110)
+            ForEach(Array(rules.wrappedValue.enumerated()), id: \.element.id) { index, rule in
+                if index > 0 { SettingsSeparator() }
+                if let current = rules.wrappedValue.firstIndex(where: { $0.id == rule.id }) {
+                    HStack(spacing: 10) {
+                        SegmentedGlassControl(
+                            options: KeywordRule.Mode.allCases.map { .init($0, $0.label) },
+                            selection: rules[current].mode,
+                            minimumSegmentWidth: 56
+                        )
 
-                        TextField("keyword", text: rules[index].text)
+                        TextField("keyword", text: rules[current].text)
                             .glassField()
                             .font(.system(size: 12))
 
@@ -100,21 +98,27 @@ struct KeywordsSettingsView: View {
                             rules.wrappedValue.removeAll { $0.id == rule.id }
                         } label: {
                             Image(systemName: Symbols.remove)
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.primary)
                         }
                         .buttonStyle(GlassCircleButtonStyle(diameter: 20))
                         .help("Remove this keyword")
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                 }
             }
 
-            Button {
-                rules.wrappedValue.append(KeywordRule(mode: .contains, text: ""))
-            } label: {
-                Label("Add keyword", systemImage: Symbols.add)
-                    .font(.system(size: 12))
+            if !rules.wrappedValue.isEmpty { SettingsSeparator() }
+
+            SettingsBlock {
+                Button {
+                    rules.wrappedValue.append(KeywordRule(mode: .contains, text: ""))
+                } label: {
+                    Label("Add keyword", systemImage: Symbols.add)
+                }
+                .buttonStyle(SettingsButtonStyle())
             }
-            .buttonStyle(GlassPillButtonStyle())
         }
         .opacity(isDisabled ? 0.5 : 1)
         .disabled(isDisabled)

@@ -22,7 +22,13 @@ final class Preferences {
         static let showInDock = "app.showInDock"
         static let overdueLookbackDays = "range.overdueLookbackDays"
         static let refreshIntervalMinutes = "sync.refreshIntervalMinutes"
-        static let windowFrame = "window.frame"
+        static let showSpotlight = "display.spotlight"
+        static let menuBarCountdown = "menubar.countdown"
+        static let completedDeadlines = "tasks.completed"
+        static let edge = "bar.edge"
+        static let edgeBarEnabled = "bar.edge.enabled"
+        static let sliverWidth = "bar.sliver.width"
+        static let sliverTitles = "bar.sliver.titles"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -41,7 +47,13 @@ final class Preferences {
     private var showInDockStorage: Bool
     private var overdueLookbackDaysStorage: Int
     private var refreshIntervalMinutesStorage: Int
-    private var windowFrameStorage: String?
+    private var showSpotlightStorage: Bool
+    private var menuBarCountdownStorage: Bool
+    private var completedDeadlinesStorage: [String: Date]
+    private var edgeStorage: ScreenEdge
+    private var edgeBarEnabledStorage: Bool
+    private var sliverWidthStorage: Double
+    private var sliverTitlesStorage: Bool
 
     // MARK: Init
 
@@ -60,7 +72,22 @@ final class Preferences {
         showInDockStorage = defaults.bool(forKey: Keys.showInDock)
         overdueLookbackDaysStorage = defaults.object(forKey: Keys.overdueLookbackDays) as? Int ?? 0
         refreshIntervalMinutesStorage = defaults.object(forKey: Keys.refreshIntervalMinutes) as? Int ?? 5
-        windowFrameStorage = defaults.string(forKey: Keys.windowFrame)
+        showSpotlightStorage = defaults.object(forKey: Keys.showSpotlight) as? Bool ?? true
+        menuBarCountdownStorage = defaults.bool(forKey: Keys.menuBarCountdown)
+        edgeStorage = defaults.string(forKey: Keys.edge).flatMap(ScreenEdge.init(rawValue:)) ?? .right
+        edgeBarEnabledStorage = defaults.object(forKey: Keys.edgeBarEnabled) as? Bool ?? true
+        let storedSliverWidth = defaults.object(forKey: Keys.sliverWidth) as? Double ?? Self.defaultSliverWidth
+        sliverWidthStorage = min(Self.sliverWidthRange.upperBound, max(Self.sliverWidthRange.lowerBound, storedSliverWidth))
+        sliverTitlesStorage = defaults.bool(forKey: Keys.sliverTitles)
+
+        // Completed ids are pruned on load so the set never grows without
+        // bound; an event that old is long outside any window the app shows.
+        let cutoff = Date().addingTimeInterval(-Self.completedRetention)
+        let stored = Self.decode([String: Date].self, from: defaults, key: Keys.completedDeadlines) ?? [:]
+        completedDeadlinesStorage = stored.filter { $0.value > cutoff }
+        if completedDeadlinesStorage.count != stored.count {
+            Self.encode(completedDeadlinesStorage, into: defaults, key: Keys.completedDeadlines)
+        }
     }
 
     // MARK: Range
@@ -152,6 +179,16 @@ final class Preferences {
         }
     }
 
+    /// Lift the next deadline out of the list and show it large, with a live
+    /// countdown, at the top of the panel.
+    var showSpotlight: Bool {
+        get { showSpotlightStorage }
+        set {
+            showSpotlightStorage = newValue
+            defaults.set(newValue, forKey: Keys.showSpotlight)
+        }
+    }
+
     static let textScaleRange: ClosedRange<Double> = 0.85...1.45
 
     var textScale: Double {
@@ -192,15 +229,54 @@ final class Preferences {
         }
     }
 
-    var windowFrameDescription: String? {
-        get { windowFrameStorage }
+    /// Show the countdown to the next deadline beside the menu bar icon.
+    var menuBarShowsCountdown: Bool {
+        get { menuBarCountdownStorage }
         set {
-            windowFrameStorage = newValue
-            if let newValue {
-                defaults.set(newValue, forKey: Keys.windowFrame)
-            } else {
-                defaults.removeObject(forKey: Keys.windowFrame)
-            }
+            menuBarCountdownStorage = newValue
+            defaults.set(newValue, forKey: Keys.menuBarCountdown)
+        }
+    }
+
+    /// The sliver at the screen edge of every display. Off, the panel drops
+    /// down from the menu bar instead.
+    var showsEdgeBar: Bool {
+        get { edgeBarEnabledStorage }
+        set {
+            edgeBarEnabledStorage = newValue
+            defaults.set(newValue, forKey: Keys.edgeBarEnabled)
+        }
+    }
+
+    static let sliverWidthRange: ClosedRange<Double> = 8...40
+    static let defaultSliverWidth: Double = 12
+
+    /// How wide the sliver at the screen edge is, in points.
+    var sliverWidth: Double {
+        get { sliverWidthStorage }
+        set {
+            let clamped = min(Self.sliverWidthRange.upperBound, max(Self.sliverWidthRange.lowerBound, newValue))
+            sliverWidthStorage = clamped
+            defaults.set(clamped, forKey: Keys.sliverWidth)
+        }
+    }
+
+    /// Run each event's title along its block on the sliver, on blocks long
+    /// enough to carry it.
+    var sliverShowsTitles: Bool {
+        get { sliverTitlesStorage }
+        set {
+            sliverTitlesStorage = newValue
+            defaults.set(newValue, forKey: Keys.sliverTitles)
+        }
+    }
+
+    /// Which screen edge the optional bar docks to.
+    var edge: ScreenEdge {
+        get { edgeStorage }
+        set {
+            edgeStorage = newValue
+            defaults.set(newValue.rawValue, forKey: Keys.edge)
         }
     }
 
@@ -246,6 +322,36 @@ final class Preferences {
     }
 
     var clientConfiguration: GoogleClientConfig { GoogleClientConfig.resolve(defaults: defaults) }
+
+    // MARK: Completed deadlines
+
+    /// How long a completion is remembered.
+    static let completedRetention: TimeInterval = 30 * 24 * 60 * 60
+
+    /// Deadline ids the user has marked done, with when they did so.
+    var completedDeadlines: [String: Date] {
+        get { completedDeadlinesStorage }
+        set {
+            completedDeadlinesStorage = newValue
+            Self.encode(newValue, into: defaults, key: Keys.completedDeadlines)
+        }
+    }
+
+    func isCompleted(_ id: String) -> Bool {
+        completedDeadlinesStorage[id] != nil
+    }
+
+    func markCompleted(_ id: String, at date: Date = Date()) {
+        var updated = completedDeadlinesStorage
+        updated[id] = date
+        completedDeadlines = updated
+    }
+
+    func markNotCompleted(_ id: String) {
+        var updated = completedDeadlinesStorage
+        updated.removeValue(forKey: id)
+        completedDeadlines = updated
+    }
 
     // MARK: Coding helpers
 

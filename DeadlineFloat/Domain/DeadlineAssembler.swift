@@ -49,6 +49,53 @@ struct DeadlineAssembler: Sendable {
         return deadlines
     }
 
+    /// Everything on the calendar inside `window` — lectures, meetings and
+    /// deadlines alike — in time order, with all-day items first. The include
+    /// rules are ignored; exclusions and declined-event hiding still apply, so
+    /// a `DONE …` event never appears. Each item says whether it is a deadline
+    /// so the schedule can mark the ones that matter.
+    func agenda(from snapshot: CalendarSnapshot, selectedCalendarIDs: Set<String>?, window: DateWindow) -> [Deadline] {
+        var everything = configuration
+        everything.showAllEvents = true
+        let resolver = EventColorResolver(palette: snapshot.palette)
+        let builder = DeadlineBuilder(calendar: calendar, detector: DeadlineDetector(configuration: everything), colorResolver: resolver)
+        let detector = DeadlineDetector(configuration: configuration)
+
+        let included = snapshot.perCalendarEvents.filter { entry in
+            guard let selectedCalendarIDs else { return true }
+            return selectedCalendarIDs.contains(entry.calendar.id)
+        }
+
+        var items = builder.build(events: included)
+        if mergeDuplicates {
+            let priority = snapshot.calendars
+                .sorted { lhs, rhs in
+                    if (lhs.primary == true) != (rhs.primary == true) { return lhs.primary == true }
+                    return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
+                }
+                .map(\.id)
+            items = DuplicateReducer(priorityOrder: priority).reduce(items)
+        }
+
+        return items
+            .filter { item in
+                switch item.timing {
+                case .timed(let start, _): return window.contains(start)
+                case .allDay(let start, let end): return window.overlaps(from: start, to: end)
+                }
+            }
+            .map { item in
+                var item = item
+                item.isDeadline = configuration.showAllEvents || detector.isDeadline(title: item.title)
+                return item
+            }
+            .sorted { lhs, rhs in
+                if lhs.isAllDay != rhs.isAllDay { return lhs.isAllDay }
+                if lhs.sortInstant != rhs.sortInstant { return lhs.sortInstant < rhs.sortInstant }
+                return lhs.id < rhs.id
+            }
+    }
+
     func sections(from snapshot: CalendarSnapshot, selectedCalendarIDs: Set<String>?, window: DateWindow, now: Date) -> [DeadlineSection] {
         let deadlines = deadlines(from: snapshot, selectedCalendarIDs: selectedCalendarIDs)
         return DeadlineGrouper(calendar: calendar, formatter: formatter)

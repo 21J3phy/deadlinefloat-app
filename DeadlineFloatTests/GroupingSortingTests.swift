@@ -42,7 +42,7 @@ final class GroupingSortingTests: XCTestCase {
         ]
 
         let sections = grouper.sections(from: deadlines, now: now, window: window)
-        XCTAssertEqual(sections.map(\.title), ["Overdue", "Today", "Tomorrow", "Friday, September 4"])
+        XCTAssertEqual(sections.map(\.title), ["Overdue", "Due today", "Due tomorrow", "Friday, September 4"])
         XCTAssertEqual(sections.map(\.kind), [.overdue, .today, .tomorrow, .day(Fixture.date(2026, 9, 4))])
     }
 
@@ -54,7 +54,7 @@ final class GroupingSortingTests: XCTestCase {
             now: now,
             window: window
         )
-        XCTAssertEqual(sections.map(\.title), ["Tomorrow"])
+        XCTAssertEqual(sections.map(\.title), ["Due tomorrow"])
     }
 
     func testFullWeekdayAndDateFormatting() {
@@ -135,7 +135,7 @@ final class GroupingSortingTests: XCTestCase {
         let ongoing = deadline("span", "DUE conference week", at: Fixture.date(2026, 8, 31), allDayEnd: Fixture.date(2026, 9, 4))
 
         let sections = grouper.sections(from: [ongoing], now: now, window: window)
-        XCTAssertEqual(sections.map(\.title), ["Today"])
+        XCTAssertEqual(sections.map(\.title), ["Due today"])
         XCTAssertEqual(sections[0].deadlines[0].dayStart, Fixture.date(2026, 9, 2))
     }
 
@@ -153,7 +153,7 @@ final class GroupingSortingTests: XCTestCase {
         let window = DateWindow(now: now, days: 3, calendar: calendar)
         let midnight = deadline("mid", "DUE midnight", at: Fixture.date(2026, 9, 3, 0, 0))
         let sections = grouper.sections(from: [midnight], now: now, window: window)
-        XCTAssertEqual(sections.map(\.title), ["Tomorrow"])
+        XCTAssertEqual(sections.map(\.title), ["Due tomorrow"])
     }
 
     // MARK: - DST behaviour
@@ -167,7 +167,7 @@ final class GroupingSortingTests: XCTestCase {
             deadline("monday", "DUE monday", at: Fixture.date(2026, 3, 9, 9, 0))
         ]
         let sections = grouper.sections(from: deadlines, now: now, window: window)
-        XCTAssertEqual(sections.map(\.title), ["Tomorrow", "Monday, March 9"])
+        XCTAssertEqual(sections.map(\.title), ["Due tomorrow", "Monday, March 9"])
         XCTAssertEqual(sections[0].deadlines.map(\.eventID), ["before", "after"])
     }
 
@@ -179,7 +179,7 @@ final class GroupingSortingTests: XCTestCase {
             deadline("mon", "DUE monday", at: Fixture.date(2026, 11, 2, 9, 0))
         ]
         let sections = grouper.sections(from: deadlines, now: now, window: window)
-        XCTAssertEqual(sections.map(\.title), ["Tomorrow", "Monday, November 2"])
+        XCTAssertEqual(sections.map(\.title), ["Due tomorrow", "Monday, November 2"])
     }
 
     // MARK: - Empty state text
@@ -187,8 +187,8 @@ final class GroupingSortingTests: XCTestCase {
     func testEmptyStateWording() {
         XCTAssertEqual(formatter.emptyStateText(range: .threeDays, showingAllEvents: false), "No deadlines in the next 3 days")
         XCTAssertEqual(formatter.emptyStateText(range: .twoDays, showingAllEvents: false), "No deadlines in the next 2 days")
-        XCTAssertEqual(formatter.emptyStateText(range: .fourDays, showingAllEvents: false), "No deadlines in the next 4 days")
-        XCTAssertEqual(formatter.emptyStateText(range: .fourDays, showingAllEvents: true), "No events in the next 4 days")
+        XCTAssertEqual(formatter.emptyStateText(range: .oneDay, showingAllEvents: false), "No deadlines today")
+        XCTAssertEqual(formatter.emptyStateText(range: .week, showingAllEvents: true), "No events this week")
     }
 
     func testLastRefreshWording() {

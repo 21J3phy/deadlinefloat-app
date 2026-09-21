@@ -1,36 +1,50 @@
 import SwiftUI
 
-/// A section title: **Overdue**, **Today**, **Tomorrow**, or the full weekday
-/// and date.
+/// A section title: **Overdue**, **Today**, **Tomorrow**, or the weekday with
+/// its date set quieter beside it.
 struct SectionHeaderView: View {
     let section: DeadlineSection
+    let formatter: DeadlineFormatter
 
     @Environment(\.typography) private var type
-    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        HStack(spacing: 6) {
-            Text(section.title.uppercased())
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text(primaryTitle.uppercased())
                 .font(type.sectionHeader)
-                .kerning(0.6)
-                .foregroundStyle(section.isOverdue ? overdueTint : Color.secondary)
+                .kerning(0.7)
+                .foregroundStyle(section.isOverdue ? Palette.overdue : Color.secondary)
 
-            Rectangle()
-                .fill(Color.hairline)
-                .frame(height: 1)
+            if let secondaryTitle {
+                Text(secondaryTitle.uppercased())
+                    .font(type.sectionHeader)
+                    .kerning(0.7)
+                    .foregroundStyle(.secondary)
+                    .opacity(0.8)
+            }
+
+            Spacer(minLength: 4)
 
             Text("\(section.deadlines.count)")
                 .font(type.sectionHeader)
                 .monospacedDigit()
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText())
         }
-        .padding(.horizontal, 2)
-        .padding(.top, 2)
+        .padding(.horizontal, Metrics.rowInset)
+        .padding(.top, Metrics.sectionSpacing)
+        .padding(.bottom, 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(section.title), \(section.deadlines.count) item\(section.deadlines.count == 1 ? "" : "s")")
     }
 
-    private var overdueTint: Color {
-        Color.red.opacity(scheme == .dark ? 0.95 : 0.8)
+    private var primaryTitle: String {
+        if case .day(let date) = section.kind { return formatter.weekday(date) }
+        return section.title
+    }
+
+    private var secondaryTitle: String? {
+        if case .day(let date) = section.kind { return formatter.shortDate(date) }
+        return nil
     }
 }

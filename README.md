@@ -1,27 +1,32 @@
 # DeadlineFloat
 
-A small always-on-top macOS window that shows the Google Calendar deadlines you
-actually have to do something about — today plus the next two, three or four
-calendar days.
+A bar down the edge of your Mac's screen, and an hourglass in the menu bar, for
+the Google Calendar deadlines you actually have to do something about — what is
+due today and when, what your day looks like, and the days after.
 
 **[deadlinefloat website →](https://21j3phy.github.io/deadlinefloat/)**
 
 Native Swift and SwiftUI, no Electron. Liquid Glass on macOS 26 and later, with a
-hand-built glass fallback down to macOS 14. Sign in with Google, read-only
+hand-built glass fallback down to macOS 14. At rest the bar is a 12-point sliver
+down the screen edge: the day as a ruler with every event drawn as long as it
+lasts, a needle for now, and what is on — or next — floating beside it with a
+live countdown. Rest the pointer on it, or click the hourglass, and the panel
+slides out: the tasks on the left, the calendar on the right, one column per
+day for one, two, three days or the week. Sign in with Google, read-only
 access, tokens in the Keychain, and no network destination other than Google's
 own endpoints.
 
-| First run | Light | Dark | Compact |
+| At rest | One day | Three days | Compact rows |
 |---|---|---|---|
-| ![Sign in](docs/screenshots/welcome.png) | ![Light mode](docs/screenshots/light.png) | ![Dark mode](docs/screenshots/dark.png) | ![Compact mode](docs/screenshots/compact.png) |
+| ![The sliver](docs/screenshots/bar.png) | ![The bar open on one day](docs/screenshots/expanded.png) | ![Three days, light mode](docs/screenshots/light.png) | ![Compact rows](docs/screenshots/compact.png) |
 
-| Settings — General | Settings — Appearance | Settings — Calendars |
-|---|---|---|
-| ![General settings](docs/screenshots/settings-light.png) | ![Appearance settings](docs/screenshots/settings-dark.png) | ![Calendar settings](docs/screenshots/settings-calendars.png) |
+| First run | Settings — General | Settings — Appearance | Settings — Calendars |
+|---|---|---|---|
+| ![Sign in](docs/screenshots/welcome.png) | ![General settings](docs/screenshots/settings-light.png) | ![Appearance settings](docs/screenshots/settings-dark.png) | ![Calendar settings](docs/screenshots/settings-calendars.png) |
 
 > These images are rendered by the app itself (`--render-screenshots`) over a
 > synthetic desktop, using its real views, type and colours. The live Liquid
-> Glass material refracts whatever is genuinely behind the window, which an
+> Glass material refracts whatever is genuinely behind the panel, which an
 > offscreen render cannot reproduce, so the previews show the layered
 > compatibility glass. Everything else is exactly what the app draws.
 
@@ -31,6 +36,7 @@ own endpoints.
 
 **Using it**
 - [Install and sign in](#install-and-sign-in)
+- [The bar](#the-bar)
 - [Launch at Login](#launch-at-login)
 - [How it decides what is a deadline](#how-it-decides-what-is-a-deadline)
 - [How the date range works](#how-the-date-range-works)
@@ -51,8 +57,10 @@ own endpoints.
 
 ## Install and sign in
 
-1. Drag **DeadlineFloat.app** to `/Applications` and open it.
-2. Press **Sign in with Google** in the window.
+1. Drag **DeadlineFloat.app** to `/Applications` and open it. A sliver appears
+   down the right edge of each display and an hourglass in the menu bar; rest
+   the pointer on the sliver, or click the hourglass, to open the bar.
+2. Press **Sign in with Google**.
 3. Your browser opens Google's sign-in page. DeadlineFloat never sees your
    password — the browser does the signing in.
 4. Google asks to allow one thing: *"See and download any calendar you can access
@@ -62,23 +70,76 @@ own endpoints.
 
 That is the entire setup. There is nothing to paste and no account to create.
 
-The window fills in straight away. Pick which calendars to include in
+The bar fills in straight away. Pick which calendars to include in
 **Settings → Calendars**; until you choose, DeadlineFloat follows whichever
 calendars are ticked in Google Calendar itself.
 
-There is no Dock icon by design — the control is the **hourglass in the menu
-bar**. Left-click toggles the window; right-click gives Show/Hide, Refresh, Reset
-Window Position, Launch at Login and Quit.
+There is no Dock icon by design — the app lives as the **hourglass in the menu
+bar**. Left-click opens the bar (or closes it); right-click gives Open/Close,
+Refresh, Settings, Launch at Login and Quit. The overdue count appears beside
+the icon when there is one, and **Settings → General → Menu bar** can add the
+countdown (`in 2 hr 14 min`, or `42 min left` while something is on).
 
-To disconnect: **Settings → Account → Disconnect**. That revokes the token with
-Google and deletes the local copy and the offline cache. You can also revoke
-access from Google's side at <https://myaccount.google.com/permissions>.
+### The bar
 
-> If you see **"Google hasn't verified this app"** during sign-in, that is
-> Google's warning for an OAuth app that has not been through its review. Press
-> **Advanced → Go to DeadlineFloat (unsafe)**. See
-> [Shipping it to other people](#shipping-it-to-other-people) for how to remove
-> that screen.
+**At rest** the bar is a 12-point sliver of dark glass on every display, spanning the
+visible height: rounded on its inner side and flaring into the screen edge
+with reverse-radius fillets at top and bottom, so it reads as the display's
+bezel reaching into the screen. It is the day as a
+ruler: midnight at the top, midnight at the bottom — so an 11:59 PM
+deadline sits at the very bottom — a red
+needle marking now, and every event as a block of its Google colour — the
+same colour as on the calendar — as long as the event lasts and the full width
+of the strip. Nothing else is drawn on it. Completed and past events are
+dimmed and the event in focus is the brightest thing on it. That event also floats beside the sliver, level
+with the needle, as a pill: **NOW** with how long it has left, or **NEXT** (or
+**DUE**) with how long until it. Nothing on the sliver ever moves or pulses.
+
+**To open it,** rest the pointer on the sliver or the pill for a quarter of a
+second (a fling to the edge or a pass across it does nothing), or click the
+hourglass in the menu bar. The sliver stretches sideways into the panel: the
+strip widens from the screen edge until it is the sheet, each block on it
+widens into its block on today's column of the calendar, and the tasks and
+the rest of the calendar fade in inside the sheet as it grows. Closing runs the same stretch
+backwards. If the bar is already open on hover, the hourglass pins it; if it
+is pinned, the hourglass closes it.
+
+On the left are the tasks:
+
+1. The **now / next card** — *HAPPENING NOW* with the event you are in and how
+   long it has **left**, or *UP NEXT* (or *DUE NEXT* for a deadline) with what
+   is coming and how long until it, worded so the countdown is never ambiguous.
+   Countdowns are whole minutes in words — `1 hr 12 min` — never seconds.
+2. **Overdue** and **Due today** — the deadlines, each with its time and how
+   long is left.
+3. **Due tomorrow** and the days after, when the range includes them, and the
+   completed drawer above it all.
+
+On the right is the calendar: one column per day, each running midnight to midnight,
+every event a solid block of its Google colour — dark text on the light
+colours, white on the rest, as Google Calendar does it — as tall as it is long,
+side by side when two genuinely overlap and nudged apart when they merely sit
+close. All-day items sit in the column's header, today's column shades the
+hours already gone, the event in focus is lifted a little brighter, and a red
+needle with the time in a bubble runs across the grid at now.
+Hovering a task row lights its block, and vice versa. The open bar lays a dark
+scrim over its glass (a pale one in light mode) so all of this stays legible
+whatever is behind it.
+
+The **1d / 2d / 3d / Week** control sets how many days you see: the calendar
+gains a column per day and the bar widens to fit, and the tasks list shows the
+deadlines due within those days. The event in focus is always looked for up to
+three days out, so the pill never goes empty on a quiet evening.
+
+It closes a third of a second after the pointer leaves, stays open while a
+menu or text field is in use, and a click on the sliver, the pill or the
+hourglass pins it; the pin button, `Esc`, or a click elsewhere lets it go.
+**Settings → General → Edge bar** picks the left or right edge (on a display
+whose Dock is on that edge the bar uses the other one), or turns the sliver
+off altogether, in which case the hourglass drops the same panel down from the
+menu bar instead. **Settings → Appearance** sets how wide the sliver is (8 to
+40 points) and can run each event's title along its block, top to bottom like
+a spine, on blocks long enough to carry it.
 
 ### Launch at Login
 
@@ -141,6 +202,13 @@ To see the interface without a Google account:
 ```bash
 /Applications/DeadlineFloat.app/Contents/MacOS/DeadlineFloat --demo
 ```
+
+`--settings`, optionally followed by a pane name (`general`, `appearance`,
+`calendars`, `keywords`, `account`, `about`), opens the settings window at
+launch: `open -a DeadlineFloat --args --settings account`. `--open` starts
+with the bar already stretched open and pinned; add `--close-after 2` to have
+it close again two seconds later, which is how the close animation gets
+filmed, since no script can hover.
 
 Demo mode uses fabricated deadlines, an in-memory token store and its own
 `UserDefaults` domain. It never touches the Keychain, your real settings, or the
@@ -340,54 +408,96 @@ Matching details:
 
 ## How the date range works
 
-The segmented control at the top picks **today plus 2, 3 or 4 calendar days**;
-the default is 3 and the choice survives relaunch. The window runs from local
-midnight this morning to local midnight *N* days later, in this Mac's time zone.
+The **1d / 2d / 3d / Week** control picks today alone, or today plus one, two
+or six more calendar days; the default is one day and the choice survives
+relaunch. The window runs from local midnight this morning to local midnight
+*N* days later, in this Mac's time zone.
 
 All the arithmetic goes through `Calendar`, never `now + n × 86400`, so the
 window stays honest across daylight saving: on the day the clocks spring forward
 it is 23 hours long, and 25 on the day they fall back. There are tests for both,
 pinned to `America/Indiana/Indianapolis`.
 
-Deadlines are grouped into **Overdue**, **Today**, **Tomorrow**, and then one
-section per remaining day titled with the full weekday and date
-(`Friday, September 4`). Empty sections are not drawn. Within each section the
+What is happening now — or, when nothing is, the next event to start — is
+lifted out as the card at the top of the tasks, with a countdown in whole
+minutes (`1 hr 13 min left` while it is on; `in 2 hr 14 min` before it
+starts; `2 days 3 hr` beyond a day). Every event on the calendar
+counts, not only deadlines; a deadline coming up says *DUE NEXT*. The moment
+an event ends the card moves to the next one. **Settings → Appearance** turns
+the card off if you would rather have the plain list.
+
+The rest are grouped into **Overdue**, **Due today**, **Due tomorrow**, and
+then one section per remaining day titled with the weekday and date
+(`Friday · Sep 4`). Empty sections are not drawn. Within each section the
 order is chronological, with all-day items at the top of their day and a stable
-tie-break so the list never reshuffles on refresh.
+tie-break so the list never reshuffles on refresh. The clock advances on the
+minute, and additionally at the exact moment any visible deadline passes or
+comes within six hours, so a row never lingers in the wrong section.
 
 **Settings → General** adds an optional look-back that keeps overdue items from
 earlier days visible. It defaults to `0`, which is the literal "today plus N
 days" window.
 
-Clicking a row opens that event in Google Calendar in your default browser.
+Clicking a row, a block on the timeline, or the spotlight opens that event in
+Google Calendar in your default browser. Right-click for **Mark as Done**,
+**Copy Link** and **Copy Title**.
+
+### Marking things done
+
+Swipe a row sideways with two fingers — either direction — and it is done: the
+row follows your fingers and uncovers a green *Done*, the trackpad taps once
+you have gone far enough, and on release the deadline leaves the list. Completion is local to this Mac — the app is
+read-only towards Google — and is remembered for thirty days, long after the
+event has left every window the app shows.
+
+Completed deadlines live in a drawer *above* the list. Scroll up past the top
+of the list and keep going: there is a barrier, the trackpad taps as you cross
+it, and the drawer settles into view with the most recently completed item
+nearest the list. Scroll back down past the barrier and the list catches at
+its default position with another tap. A short pull that does not reach the
+barrier springs back where it started. Swipe a completed row sideways, or
+right-click it, to bring it back. (The drawer's barrier needs macOS 15; on
+macOS 14 the completed section simply follows the list.)
 
 ---
 
 ## Colours
 
-Rows use the exact colour Google reports, resolved the way Google Calendar
-resolves it:
+Everything is drawn in the colour Google Calendar itself shows, resolved the
+way Google Calendar resolves it:
 
-1. the event's own `colorId`, looked up in the live palette from `GET /colors`;
-2. otherwise the parent calendar's colour;
-3. otherwise Google's published default palette (used offline on a first run);
-4. otherwise a neutral blue.
+1. the event's own `colorId`;
+2. otherwise the parent calendar's `colorId`, or its `backgroundColor`;
+3. otherwise a neutral blue.
 
-The palette is fetched on first sync, refreshed every 24 hours, and refreshed
-immediately whenever an event arrives carrying a colour id the cached palette has
-never seen.
+There is a wrinkle here worth knowing. The Calendar API still reports its
+original 2010 palette — Tomato as `#dc2127`, Basil as `#16a765` — and
+`GET /colors` returns the same, while Google Calendar on the web and on phones
+has drawn the newer Material palette since 2018: Tomato is `#D50000`, Basil
+`#0B8043`. Using the API's values verbatim looks *nothing* like your calendar.
+So every preset is translated, by id when one is given and by hex otherwise,
+to the colour Google Calendar shows (`Domain/GooglePalette.swift` holds both
+tables). A calendar with a custom colour you picked yourself is not a preset
+and is used exactly as reported. The live palette is fetched on first sync,
+refreshed every 24 hours, and consulted only for an id neither built-in table
+knows.
 
-**Urgency never changes that colour.** The stripe down the left of each row is the
-unmodified Google colour. Urgency is carried by three other things: the icon
-(⚠︎ overdue, ⏰ due within six hours, 🗓 later), the wording and colour of the
-countdown, and an extra border drawn around the card. There is a test asserting
-that the same event resolves to the same colour whether it is overdue, imminent
-or days away.
+**Urgency never changes that colour.** The capsule bar down the leading edge of
+each row, the block on the calendar and the segment on the sliver are all the
+unmodified Google colour, and the card carries it as a dot and as a soft glow.
+Urgency is carried by the wording and colour of the countdown — `2 hr 14 min
+left` in amber inside six hours, `2 hr 14 min ago` in red once it has passed —
+and overdue rows sit on a faint red wash. There is a test asserting that the same event resolves to the same colour
+whether it is overdue, imminent or days away.
 
-Where a Google colour is used as *text* — the calendar name on each row — it is
-lifted or darkened just enough to clear a 4.5:1 contrast ratio against the current
-appearance, keeping its hue. A test walks all 35 published Google colours and
-checks every one is readable in both light and dark mode.
+Text in the task list is never tinted with a Google colour. The bar is glass
+over whatever happens to be behind it, and a coloured label that reads well
+over a dark wallpaper vanishes over a white document; monochrome text keeps
+its contrast on any backdrop. Urgency uses Google Calendar's own text colours
+— its red and green 700 in light mode, its red and green 300 in dark, its
+yellow 600 for amber — each clearing 4.5:1 on the panel. The app honours
+**Increase contrast** and **Reduce transparency** in System Settings — the
+latter turns the glass into a solid window background.
 
 ---
 
@@ -424,9 +534,10 @@ without a network, a Keychain or a window.
 
 ```
 DeadlineFloat/
-├── App/            NSApplication lifecycle: the NSPanel, its backdrop,
-│                   the status item, the settings window, the main menu,
-│                   Launch at Login, and the preview renderer
+├── App/            NSApplication lifecycle: the menu bar panel, the optional
+│                   edge bars (one per display) and their coordinator, the
+│                   status item, the settings window, the main menu, Launch
+│                   at Login, and the preview renderer
 ├── Models/         Google API payloads and the display-ready Deadline type
 ├── Domain/         Pure logic — date window, RFC 3339 parsing, deadline
 │                   detection, building, de-duplication, grouping, sorting,
@@ -435,10 +546,12 @@ DeadlineFloat/
 │                   client, the Calendar API client, repository, disk cache
 ├── Preferences/    Every setting, persisted in UserDefaults
 ├── ViewModels/     DeadlineListViewModel — refresh loop, clock tick, sections
-├── Views/          SwiftUI: panel, rows, sections, empty and error states,
-│                   the six settings panes, demo data
-├── DesignSystem/   Liquid Glass surfaces and controls, type ramp, colour
-│                   contrast maths, SF Symbol catalogue
+├── Views/          SwiftUI: the bar, the day rail, the calendar, the pill,
+│                   the task pane, the now/next card, rows, sections, the
+│                   completed drawer, empty and sign-in states, the six
+│                   settings panes, demo data
+├── DesignSystem/   Liquid Glass surfaces and controls, type ramp, palette,
+│                   motion, SF Symbol catalogue
 └── Support/        Logging, app info, small extensions
 ```
 
@@ -449,27 +562,41 @@ DeadlineFloat/
 | What counts as "today plus 3 days"? | `Domain/DateWindow.swift` |
 | What is a deadline? | `Domain/DeadlineDetector.swift` |
 | When is something overdue? | `Domain/DeadlineBuilder.swift` |
-| Which colour, and why? | `Domain/EventColorResolver.swift` |
+| Which colour, and why does it match Google Calendar? | `Domain/EventColorResolver.swift`, `Domain/GooglePalette.swift` |
+| What is happening now, or next, and what does the countdown run to? | `Domain/ScheduleFocus.swift` |
+| What is on the calendar, and which of it is a deadline? | `Domain/DeadlineAssembler.swift` |
+| What stretch of the day is the ruler, and which day is it now? | `Domain/RulerSpan.swift` |
+| Why are two events half an hour apart both readable? | `Domain/TimelineLayout.swift` |
+| How does hovering open and close the bar? | `App/EdgeBarController.swift` |
+| How does the menu bar panel drop down and close? | `App/MenuBarPanelController.swift` |
+| Where does a scroll come to rest, and when does the trackpad tap? | `Domain/DrawerDetents.swift` |
+| How does a two-finger swipe become a completion? | `Domain/SwipeRecognizer.swift`, `App/SwipeGestureMonitor.swift` |
 | Why can't this app write to my calendar? | `Services/HTTPClient.swift` |
 | Where does the client ID come from? | `Services/GoogleClientConfig.swift` |
 | How does the glass work on macOS 14? | `DesignSystem/Glass.swift` |
-| Why doesn't clicking the window steal focus? | `App/FloatingPanel.swift` |
+| Why doesn't clicking the panel steal focus? | `App/EdgeBarPanel.swift` |
 
-**The window.** An `NSPanel` with `.nonactivatingPanel`, `level = .floating` and
-`collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]`, so it stays
-above ordinary windows and follows you between Spaces without ever taking focus
-from what you are working in. Position and size are saved as you move it and
-restored on launch — and pulled back onto a real screen if the display they were
-saved on has since been unplugged. **Window → Reset Window Position** (also in the
-menu-bar menu) recovers from anything stranger.
+**The bar.** Two borderless, non-activating `NSPanel`s per display, both
+`level = .floating` with `[.canJoinAllSpaces, .fullScreenAuxiliary]`: one is
+exactly the sliver's width when collapsed — so the rest of the screen stays
+clickable — and grows to the full panel; the other is the pill. Neither ever
+takes focus from what you are working in. A tracking area reports the pointer
+entering and leaving; a dwell opens the bar and a grace period closes it.
+`EdgeBarCoordinator` keeps one pair per display and rebuilds the set when
+displays come and go. With the sliver turned off, the same content drops down
+from the status item in a panel at `.popUpMenu` level that a global and a
+local mouse monitor close on a click anywhere outside.
 
 **The glass.** On macOS 26 and later the SwiftUI content lives inside an
 `NSGlassEffectView` and controls use `glassEffect(_:in:)`, `GlassEffectContainer`
 and interactive `Glass` — the real system material. On macOS 14 and 15 the same
 shapes are drawn as a layered approximation: always-active `NSVisualEffectView`,
-vertical sheen, specular rim and shadow. **Settings → Appearance** tells you which
-one this Mac is using. Switches, steppers, sliders and text fields are drawn in
-SwiftUI rather than AppKit so the whole settings window shares one material.
+vertical sheen, specular rim and shadow. Glass is reserved for the control
+layer — the range control, the header capsule, chips and buttons. Rows and the
+spotlight sit directly on the window material, which is what keeps the panel
+reading as one object rather than a stack of tinted boxes. Switches, steppers,
+sliders and the segmented control are drawn in SwiftUI rather than AppKit so
+the settings window shares the same language.
 
 ---
 
@@ -479,14 +606,18 @@ SwiftUI rather than AppKit so the whole settings window shares one material.
 Tools/run_tests.sh
 ```
 
-**229 tests, all passing.** They cover:
+**271 tests, all passing.** They cover:
 
 | Area | File |
 |---|---|
 | Date boundaries, DST, noon vs midnight | `DateWindowTests`, `GoogleDateTests` |
 | Sorting and grouping | `GroupingSortingTests` |
 | Deadline filtering | `DeadlineDetectorTests` |
-| Countdowns | `CountdownFormatterTests` |
+| Countdowns, the card's clock, section and footer text | `CountdownFormatterTests`, `SpotlightTests` |
+| What is happening now, or next | `CompletionTests` (`ScheduleFocusTests`) |
+| Completion, the drawer's detents, swipe recognition | `CompletionTests` |
+| The day's span, which day is current, the hour labels | `RulerTests` |
+| The calendar's events: every event, exclusions, which are deadlines | `CompletionTests` (`AgendaTests`) |
 | Recurrence | `RecurrenceTests` |
 | Colour selection | `EventColorTests`, `RGBColorTests` |
 | Building deadlines from events | `DeadlineBuilderTests` |
@@ -498,7 +629,7 @@ Tools/run_tests.sh
 | OAuth client resolution and validation | `GoogleClientConfigTests` |
 | Settings persistence and clamping | `PreferencesTests` |
 | Offline cache | `SnapshotCacheTests` |
-| Error → UI state mapping, window placement | `RepositoryAndStateTests` |
+| Error → UI state mapping | `RepositoryAndStateTests` |
 | Every SF Symbol resolves | `SymbolAvailabilityTests` |
 
 Nothing in the suite touches the network, the Keychain or a Google account. Unit
@@ -545,9 +676,10 @@ stop it.
 **`Error 400: redirect_uri_mismatch`** — the OAuth client is a *Web application*
 rather than a *Desktop app*. Recreate it with the right type.
 
-**The window has vanished.** Click the hourglass in the menu bar, or use the menu
-bar item's **Reset Window Position** if it ended up on a display you no longer
-have.
+**The bar does not appear.** Press ⌘W or click the hourglass in the menu bar.
+If the menu bar is crowded, macOS may have hidden the icon; widen the menu bar
+or remove another item. The sliver sits on the right edge of every display
+unless the Dock is there, in which case it uses the left.
 
 **Launch at Login says "Unavailable for this build".** Move the app to
 `/Applications` and try again.

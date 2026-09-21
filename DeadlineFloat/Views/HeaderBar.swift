@@ -1,75 +1,65 @@
 import SwiftUI
 
-/// The minimal header: identity on the left, the three controls on the right,
-/// and the whole strip doubles as the window's drag handle.
+/// The task pane's header: the date range on the left, one grouped glass
+/// capsule of controls on the right. The app's name is deliberately absent —
+/// the bar is the brand.
 struct HeaderBar: View {
-    let overdueCount: Int
+    let range: RangeOption
     let isRefreshing: Bool
+    let isPinned: Bool
+    var onSelectRange: (RangeOption) -> Void
     var onRefresh: () -> Void
     var onSettings: () -> Void
-    var onHide: () -> Void
+    var onTogglePin: () -> Void
 
     @Environment(\.typography) private var type
-    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: Symbols.appMark)
-                .font(.system(size: type.iconSize + 1, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-                .accessibilityHidden(true)
+        HStack(spacing: 8) {
+            SegmentedGlassControl(
+                options: RangeOption.allCases.map {
+                    .init($0, $0.shortLabel, help: $0 == .oneDay ? "Today" : "Today plus \($0.days - 1) more day\($0.days == 2 ? "" : "s")")
+                },
+                selection: Binding(get: { range }, set: onSelectRange),
+                minimumSegmentWidth: 22
+            )
+            .accessibilityLabel("Date range")
 
-            Text("DeadlineFloat")
-                .font(type.headerTitle)
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .layoutPriority(1)
-
-            if overdueCount > 0 {
-                overdueChip
-                    .transition(.opacity)
-            }
-
-            Spacer(minLength: 4)
+            Spacer(minLength: 6)
 
             controls
         }
         .padding(.horizontal, Metrics.contentInset)
-        .frame(height: Metrics.headerHeight)
-        .background { WindowDragArea() }
+        .padding(.top, Metrics.contentInset)
+        .padding(.bottom, Metrics.blockGap)
         .glassGroup(spacing: 10)
     }
 
-    private var overdueChip: some View {
-        Text("\(overdueCount) overdue")
-            .font(type.footnote)
-            .monospacedDigit()
-            .foregroundStyle(Color.red.opacity(scheme == .dark ? 0.95 : 0.85))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .glassSurface(
-                in: Capsule(style: .continuous),
-                variant: .chip,
-                tint: Color.red
-            )
-            .accessibilityLabel("\(overdueCount) overdue")
-    }
-
     private var controls: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 1) {
+            Button(action: onTogglePin) {
+                Image(systemName: isPinned ? Symbols.pinned : Symbols.pin)
+                    .font(.system(size: type.iconSize, weight: .semibold))
+                    .foregroundStyle(isPinned ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+            }
+            .buttonStyle(GlassIconButtonStyle())
+            .help(isPinned ? "Unpin — the bar closes when the pointer leaves" : "Pin the bar open")
+            .accessibilityLabel(isPinned ? "Unpin" : "Pin")
+
             Button(action: onRefresh) {
                 Image(systemName: Symbols.refresh)
                     .font(.system(size: type.iconSize, weight: .semibold))
-                    .rotationEffect(.degrees(isRefreshing ? 360 : 0))
+                    .rotationEffect(.degrees(isRefreshing && !reduceMotion ? 360 : 0))
                     .animation(
-                        isRefreshing
+                        isRefreshing && !reduceMotion
                             ? .linear(duration: 0.9).repeatForever(autoreverses: false)
                             : .default,
                         value: isRefreshing
                     )
             }
-            .buttonStyle(GlassCircleButtonStyle())
-            .help("Refresh now")
+            .buttonStyle(GlassIconButtonStyle())
+            .help("Refresh now (⌘R)")
             .accessibilityLabel("Refresh")
             .disabled(isRefreshing)
 
@@ -77,18 +67,11 @@ struct HeaderBar: View {
                 Image(systemName: Symbols.settings)
                     .font(.system(size: type.iconSize, weight: .semibold))
             }
-            .buttonStyle(GlassCircleButtonStyle())
-            .help("Settings")
+            .buttonStyle(GlassIconButtonStyle())
+            .help("Settings (⌘,)")
             .accessibilityLabel("Settings")
-
-            Button(action: onHide) {
-                Image(systemName: Symbols.hide)
-                    .font(.system(size: type.iconSize - 1, weight: .bold))
-            }
-            .buttonStyle(GlassCircleButtonStyle())
-            .help("Hide window — reopen from the menu bar")
-            .accessibilityLabel("Hide window")
         }
-        .foregroundStyle(.primary)
+        .padding(2)
+        .glassSurface(in: Capsule(style: .continuous), variant: .control)
     }
 }

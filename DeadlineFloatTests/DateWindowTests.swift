@@ -7,10 +7,12 @@ import XCTest
 final class DateWindowTests: XCTestCase {
     private let calendar = Fixture.calendar()
 
-    func testDefaultRangeIsThreeDays() {
-        XCTAssertEqual(RangeOption.default, .threeDays)
-        XCTAssertEqual(RangeOption.default.days, 3)
-        XCTAssertEqual(RangeOption(days: 99), .threeDays, "unknown values fall back to the default")
+    func testDefaultRangeIsOneDay() {
+        XCTAssertEqual(RangeOption.default, .oneDay)
+        XCTAssertEqual(RangeOption.default.days, 1)
+        XCTAssertEqual(RangeOption(days: 99), .oneDay, "unknown values fall back to the default")
+        XCTAssertEqual(RangeOption.week.days, 7)
+        XCTAssertEqual(RangeOption.week.shortLabel, "Week")
     }
 
     func testWindowStartsAtLocalMidnightToday() {

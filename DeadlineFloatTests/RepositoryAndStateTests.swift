@@ -106,51 +106,6 @@ final class SyncStateTests: XCTestCase {
     }
 }
 
-@MainActor
-final class WindowPlacementTests: XCTestCase {
-    // `NSScreen` cannot be constructed, so placement is checked against the
-    // real screens of the machine running the tests.
-
-    func testFrameOnAnExistingScreenIsLeftAlone() throws {
-        let screen = try XCTUnwrap(NSScreen.screens.first)
-        let frame = NSRect(
-            x: screen.visibleFrame.midX - 170,
-            y: screen.visibleFrame.midY - 230,
-            width: 340,
-            height: 460
-        )
-        XCTAssertEqual(FloatingPanelController.clampToVisibleScreens(frame), frame)
-    }
-
-    func testFrameOnAVanishedDisplayIsBroughtBack() throws {
-        let screen = try XCTUnwrap(NSScreen.screens.first)
-        let offscreen = NSRect(x: -9_000, y: -9_000, width: 340, height: 460)
-        let corrected = try XCTUnwrap(FloatingPanelController.clampToVisibleScreens(offscreen))
-
-        XCTAssertNotEqual(corrected, offscreen)
-        XCTAssertEqual(corrected.size, offscreen.size, "only the position moves")
-        XCTAssertTrue(screen.visibleFrame.intersects(corrected))
-    }
-
-    func testDefaultFrameUsesTheStandardSizeAndSitsOnScreen() throws {
-        let frame = FloatingPanelController.defaultFrame()
-        XCTAssertEqual(frame.size, Metrics.defaultWindowSize)
-        if let screen = NSScreen.main {
-            XCTAssertTrue(screen.visibleFrame.intersects(frame))
-        }
-    }
-
-    func testNoScreensMeansNoFrame() {
-        XCTAssertNil(FloatingPanelController.clampToVisibleScreens(NSRect(x: 0, y: 0, width: 340, height: 460), screens: []))
-    }
-
-    func testMinimumSizeIsSmallerThanTheDefault() {
-        XCTAssertLessThan(Metrics.minimumWindowSize.width, Metrics.defaultWindowSize.width)
-        XCTAssertLessThan(Metrics.minimumWindowSize.height, Metrics.defaultWindowSize.height)
-        XCTAssertGreaterThan(Metrics.maximumWindowSize.width, Metrics.defaultWindowSize.width)
-    }
-}
-
 final class DemoDataTests: XCTestCase {
     func testDemoSnapshotProducesEveryKindOfSection() {
         let calendar = Fixture.calendar()
@@ -184,8 +139,9 @@ final class DemoDataTests: XCTestCase {
         XCTAssertFalse(titles.contains { $0.hasPrefix("DONE") })
     }
 
-    func testDemoPaletteCoversGooglesPublishedColours() {
-        XCTAssertEqual(DemoData.palette.event?.count, GooglePalette.eventBackgrounds.count)
-        XCTAssertEqual(DemoData.palette.calendar?.count, GooglePalette.calendarBackgrounds.count)
+    func testDemoPaletteIsWhatTheAPIReports() {
+        XCTAssertEqual(DemoData.palette.event?.count, GooglePalette.apiEventBackgrounds.count)
+        XCTAssertEqual(DemoData.palette.calendar?.count, GooglePalette.apiCalendarBackgrounds.count)
+        XCTAssertEqual(DemoData.palette.event?["11"]?.background, "#dc2127")
     }
 }

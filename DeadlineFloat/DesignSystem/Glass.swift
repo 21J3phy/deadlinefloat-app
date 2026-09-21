@@ -6,7 +6,7 @@ enum GlassVariant: Sendable {
     case window
     /// Buttons and the range selector — the floating control layer.
     case control
-    /// Deadline rows.
+    /// Larger content surfaces such as the sign-in card.
     case card
     /// Small status pills.
     case chip
@@ -19,22 +19,40 @@ enum GlassVariant: Sendable {
 /// the interactive press response. On macOS 14–15 it falls back to a layered
 /// approximation: translucent fill, vertical sheen, specular top edge and a
 /// gradient rim, which reads as the same material rather than as flat chrome.
+///
+/// Glass is reserved for the *control* layer. Content — rows, section titles,
+/// the spotlight — sits directly on the window material, which is what keeps
+/// the panel reading as one object instead of a stack of tinted boxes.
 struct GlassSurface<S: InsettableShape>: ViewModifier {
     let shape: S
-    var variant: GlassVariant = .card
+    var variant: GlassVariant = .control
     var tint: Color?
     var isInteractive: Bool = false
     var isHighlighted: Bool = false
 
     @Environment(\.colorScheme) private var scheme
     @Environment(\.isOffscreenRender) private var isOffscreenRender
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *), !isOffscreenRender {
+        if reduceTransparency {
+            content.background { solidSurface }
+        } else if #available(macOS 26.0, *), !isOffscreenRender {
             content.glassEffect(modernGlass, in: shape)
         } else {
             content.background { legacyGlass }
+        }
+    }
+
+    /// Reduce Transparency: the window background colour, opaque, with a
+    /// hairline — text never sits over a moving backdrop.
+    private var solidSurface: some View {
+        ZStack {
+            shape.fill(Color(nsColor: .windowBackgroundColor))
+            if let tint { shape.fill(tint.opacity(0.35)) }
+            if isHighlighted { shape.fill(Color.primary.opacity(0.08)) }
+            shape.strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
         }
     }
 
@@ -44,23 +62,23 @@ struct GlassSurface<S: InsettableShape>: ViewModifier {
     private var modernGlass: Glass {
         var glass: Glass
         switch variant {
-        case .window, .control:
+        case .window, .control, .card:
             glass = .regular
-        case .card, .chip:
+        case .chip:
             glass = .clear
         }
         if let tint {
             glass = glass.tint(tint.opacity(modernTintStrength))
         } else if isHighlighted {
-            glass = glass.tint(Color.primary.opacity(0.08))
+            glass = glass.tint(Color.primary.opacity(0.10))
         }
         return glass.interactive(isInteractive)
     }
 
     private var modernTintStrength: Double {
         switch variant {
-        case .card: return isHighlighted ? 0.16 : 0.09
-        default: return isHighlighted ? 0.30 : 0.20
+        case .chip: return isHighlighted ? 0.28 : 0.18
+        default: return isHighlighted ? 0.34 : 0.24
         }
     }
 
@@ -69,28 +87,28 @@ struct GlassSurface<S: InsettableShape>: ViewModifier {
     private var isDark: Bool { scheme == .dark }
 
     private var baseFillOpacity: Double {
-        let boost = isHighlighted ? 0.06 : 0.0
+        let boost = isHighlighted ? 0.07 : 0.0
         switch variant {
-        case .window: return (isDark ? 0.16 : 0.42) + boost
-        case .control: return (isDark ? 0.13 : 0.50) + boost
-        case .card: return (isDark ? 0.085 : 0.46) + boost
-        case .chip: return (isDark ? 0.10 : 0.44) + boost
+        case .window: return (isDark ? 0.12 : 0.40) + boost
+        case .control: return (isDark ? 0.14 : 0.52) + boost
+        case .card: return (isDark ? 0.08 : 0.42) + boost
+        case .chip: return (isDark ? 0.10 : 0.46) + boost
         }
     }
 
     private var legacyTintStrength: Double {
         switch variant {
-        case .card: return isHighlighted ? 0.16 : 0.085
-        default: return isHighlighted ? 0.26 : 0.17
+        case .chip: return isHighlighted ? 0.22 : 0.15
+        default: return isHighlighted ? 0.30 : 0.22
         }
     }
 
     private var rimOpacity: (top: Double, bottom: Double) {
         switch variant {
         case .window: return isDark ? (0.34, 0.05) : (0.90, 0.20)
-        case .control: return isDark ? (0.40, 0.06) : (0.95, 0.24)
+        case .control: return isDark ? (0.42, 0.07) : (0.95, 0.26)
         case .card: return isDark ? (0.22, 0.04) : (0.80, 0.16)
-        case .chip: return isDark ? (0.26, 0.05) : (0.85, 0.18)
+        case .chip: return isDark ? (0.28, 0.05) : (0.85, 0.18)
         }
     }
 
@@ -114,9 +132,6 @@ struct GlassSurface<S: InsettableShape>: ViewModifier {
                 )
             )
 
-            // A whisper of the event's own Google colour. The stripe and the
-            // calendar name carry the identity; a heavy wash here would make
-            // the list harder to read, not easier.
             if let tint {
                 shape.fill(tint.opacity(legacyTintStrength))
             }
@@ -137,7 +152,7 @@ struct GlassSurface<S: InsettableShape>: ViewModifier {
         }
         .compositingGroup()
         .shadow(
-            color: Color.black.opacity(isDark ? 0.28 : 0.10),
+            color: Color.black.opacity(isDark ? 0.30 : 0.10),
             radius: variant == .control ? 4 : 2,
             y: variant == .control ? 1.5 : 1
         )
@@ -146,15 +161,17 @@ struct GlassSurface<S: InsettableShape>: ViewModifier {
 
 /// Set while rendering previews offscreen with `ImageRenderer`.
 ///
-/// Three things behave differently in that pass and each is handled explicitly
+/// Four things behave differently in that pass and each is handled explicitly
 /// rather than left to produce a broken image:
 ///
 /// * Liquid Glass samples the real backdrop through the window server, which an
 ///   offscreen pass cannot see, so the layered fallback is used instead;
 /// * `NSViewRepresentable` has no live view to draw, so the window drag handle
-///   collapses to nothing;
+///   and the settings sidebar material collapse to plain views;
 /// * lazy stacks inside a `ScrollView` render no rows at all, so the list draws
-///   eagerly.
+///   eagerly;
+/// * the spotlight's live clock is replaced by the preview's fixed reference
+///   time, so its countdown agrees with the rows around it.
 private struct OffscreenRenderKey: EnvironmentKey {
     static let defaultValue = false
 }
@@ -170,7 +187,7 @@ extension View {
     /// Wraps the view in a Liquid Glass surface of the given shape.
     func glassSurface<S: InsettableShape>(
         in shape: S,
-        variant: GlassVariant = .card,
+        variant: GlassVariant = .control,
         tint: Color? = nil,
         isInteractive: Bool = false,
         isHighlighted: Bool = false
@@ -203,7 +220,9 @@ extension View {
     }
 }
 
-/// A round icon button in the floating control layer.
+// MARK: - Button styles
+
+/// A round icon button that is its own piece of glass.
 struct GlassCircleButtonStyle: ButtonStyle {
     var diameter: CGFloat = Metrics.controlDiameter
     var isHighlighted: Bool = false
@@ -219,29 +238,83 @@ struct GlassCircleButtonStyle: ButtonStyle {
                 isInteractive: true,
                 isHighlighted: isHighlighted || isHovering
             )
-            .opacity(configuration.isPressed ? 0.62 : 1)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .animation(Motion.quick, value: configuration.isPressed)
+            .animation(Motion.quick, value: isHovering)
             .onHover { isHovering = $0 }
     }
 }
 
-/// A pill-shaped text button used in empty and error states.
-struct GlassPillButtonStyle: ButtonStyle {
-    var isProminent: Bool = false
+/// An icon button that lives *inside* a shared glass capsule — the header's
+/// control group. It draws no glass of its own, only a hover disc, so several
+/// of them read as one control.
+struct GlassIconButtonStyle: ButtonStyle {
+    var diameter: CGFloat = Metrics.controlDiameter
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.isEnabled) private var isEnabled
     @State private var isHovering = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, 11)
-            .padding(.vertical, 5)
-            .contentShape(Capsule())
-            .glassSurface(
-                in: Capsule(),
-                variant: .control,
-                tint: isProminent ? Color.accentColor : nil,
-                isInteractive: true,
-                isHighlighted: isHovering
-            )
-            .opacity(configuration.isPressed ? 0.62 : 1)
+            .foregroundStyle(isHovering && isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+            .frame(width: diameter, height: diameter)
+            .background {
+                Circle()
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.14 : (isHovering ? 0.09 : 0)))
+            }
+            .contentShape(Circle())
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .opacity(isEnabled ? 1 : 0.4)
+            .animation(Motion.quick, value: configuration.isPressed)
+            .animation(Motion.quick, value: isHovering)
             .onHover { isHovering = $0 }
+    }
+}
+
+/// A pill-shaped text button. `isProminent` makes it the one call to action on
+/// screen: accent-tinted glass with white text.
+struct GlassPillButtonStyle: ButtonStyle {
+    var isProminent: Bool = false
+    var isLarge: Bool = false
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.isOffscreenRender) private var isOffscreenRender
+    @State private var isHovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: isLarge ? 13 : 12, weight: isProminent ? .semibold : .medium))
+            .foregroundStyle(isProminent ? Color.white : Color.primary)
+            .padding(.horizontal, isLarge ? 16 : 12)
+            .padding(.vertical, isLarge ? 8 : 5.5)
+            .contentShape(Capsule())
+            .background { prominentFallback }
+            .modifier(surface)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.85 : (isEnabled ? 1 : 0.5))
+            .animation(Motion.quick, value: configuration.isPressed)
+            .animation(Motion.quick, value: isHovering)
+            .onHover { isHovering = $0 }
+    }
+
+    private var surface: some ViewModifier {
+        GlassSurface(
+            shape: Capsule(style: .continuous),
+            variant: .control,
+            tint: isProminent ? Color.accentColor : nil,
+            isInteractive: true,
+            isHighlighted: isHovering
+        )
+    }
+
+    /// Before macOS 26 the layered glass cannot carry enough tint to read as a
+    /// primary button, so the prominent style gets a solid accent body underneath.
+    @ViewBuilder
+    private var prominentFallback: some View {
+        if isProminent, !Runtime.supportsLiquidGlass || isOffscreenRender {
+            Capsule(style: .continuous)
+                .fill(Color.accentColor.opacity(isHovering ? 1 : 0.92))
+        }
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The settings window: a glass rail on the left, one pane at a time on the right.
+/// The settings window: a sidebar on the left, one pane at a time on the right.
 struct SettingsView: View {
     @Bindable var viewModel: DeadlineListViewModel
     @Bindable var navigation: SettingsNavigation
@@ -10,7 +10,16 @@ struct SettingsView: View {
         self.navigation = navigation
     }
 
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isOffscreenRender) private var isOffscreenRender
+
     private var pane: Pane { navigation.pane }
+
+    /// The window's transparent title bar is a safe-area inset in the live
+    /// app. The offscreen render has no title bar, so it pads the same amount
+    /// to keep the two layouts identical.
+    private var titleBarAllowance: CGFloat { isOffscreenRender ? 28 : 0 }
 
     enum Pane: String, CaseIterable, Identifiable {
         case general, appearance, calendars, keywords, account, about
@@ -37,61 +46,88 @@ struct SettingsView: View {
             case .about: return Symbols.about
             }
         }
+
+        var color: Color {
+            switch self {
+            case .general: return Color(nsColor: .systemGray)
+            case .appearance: return Color(nsColor: .systemPurple)
+            case .calendars: return Color(nsColor: .systemRed)
+            case .keywords: return Color(nsColor: .systemBlue)
+            case .account: return Color(nsColor: .systemGreen)
+            case .about: return Color(nsColor: .systemIndigo)
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .general: return "Range, refreshing, window and startup."
+            case .appearance: return "How the panel is laid out and how it looks."
+            case .calendars: return "Which Google calendars feed the window."
+            case .keywords: return "What counts as a deadline."
+            case .account: return "Your Google connection and what it can see."
+            case .about: return "Version, shortcuts and where things live."
+            }
+        }
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            rail
-            Divider().overlay(Color.hairline)
-            RenderableScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(pane.title)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .padding(.bottom, 2)
-                    paneContent
-                }
-                .padding(18)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            sidebar
+            Rectangle()
+                .fill(Color.hairline)
+                .frame(width: 1)
+            detail
         }
-        .frame(minWidth: 620, idealWidth: 660, minHeight: 460, idealHeight: 520)
-        .background { SettingsBackdrop() }
+        .frame(minWidth: 700, idealWidth: 740, minHeight: 520, idealHeight: 580)
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
     }
 
-    private var rail: some View {
+    // MARK: - Sidebar
+
+    private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Pane.allCases) { item in
-                Button {
-                    navigation.pane = item
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: item.symbol)
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 16)
-                        Text(item.title)
-                            .font(.system(size: 12.5, weight: pane == item ? .semibold : .regular))
-                        Spacer(minLength: 0)
-                    }
-                    .foregroundStyle(pane == item ? Color.primary : Color.secondary)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .background {
-                    if pane == item {
-                        Color.clear.glassSurface(
-                            in: RoundedRectangle(cornerRadius: 9, style: .continuous),
-                            variant: .control
-                        )
+                SidebarItem(pane: item, isSelected: pane == item) {
+                    if reduceMotion {
+                        navigation.pane = item
+                    } else {
+                        withAnimation(Motion.pane) { navigation.pane = item }
                     }
                 }
             }
             Spacer()
         }
-        .padding(10)
-        .frame(width: 176, alignment: .leading)
-        .glassGroup(spacing: 8)
+        .padding(.horizontal, 12)
+        .padding(.top, 16 + titleBarAllowance)
+        .padding(.bottom, 12)
+        .frame(width: 200, alignment: .leading)
+        .background { SidebarBackdrop().ignoresSafeArea() }
+    }
+
+    // MARK: - Detail
+
+    private var detail: some View {
+        RenderableScrollView(showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(pane.title)
+                        .font(.system(size: 22, weight: .bold))
+                    Text(pane.subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, 2)
+
+                paneContent
+                    .id(pane)
+                    .transition(.opacity)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 16 + titleBarAllowance)
+            .padding(.bottom, 24)
+            .frame(maxWidth: 560, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     @ViewBuilder
@@ -107,17 +143,38 @@ struct SettingsView: View {
     }
 }
 
-/// Backdrop for the settings window, matching the panel's material.
-private struct SettingsBackdrop: View {
+private struct SidebarItem: View {
+    let pane: SettingsView.Pane
+    let isSelected: Bool
+    let action: () -> Void
+
+    @Environment(\.colorScheme) private var scheme
+    @State private var isHovering = false
+
     var body: some View {
-        if #available(macOS 26.0, *) {
-            Color.clear.glassSurface(in: Rectangle(), variant: .window)
-        } else {
-            VisualEffectView(material: .underWindowBackground, blendingMode: .behindWindow)
+        Button(action: action) {
+            HStack(spacing: 9) {
+                PaneIcon(symbol: pane.symbol, color: pane.color)
+                Text(pane.title)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
+        .buttonStyle(.plain)
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.primary.opacity(isSelected ? (scheme == .dark ? 0.13 : 0.09) : (isHovering ? 0.05 : 0)))
+        }
+        .animation(Motion.quick, value: isHovering)
+        .animation(Motion.quick, value: isSelected)
+        .onHover { isHovering = $0 }
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
-
 
 /// Which settings pane is showing.
 ///

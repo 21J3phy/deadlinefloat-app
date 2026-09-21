@@ -14,4 +14,10 @@ enum Log {
     static let network = Logger(subsystem: subsystem, category: "network")
     static let sync = Logger(subsystem: subsystem, category: "sync")
     static let ui = Logger(subsystem: subsystem, category: "ui")
+
+    /// A trace that also reaches stderr, for the bar's open/close state
+    /// machine, which is otherwise invisible from outside the process.
+    static func trace(_ message: String) {
+        NSLog("[DeadlineFloat] %@", message)
+    }
 }

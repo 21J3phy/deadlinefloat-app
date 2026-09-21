@@ -24,6 +24,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.center(ifNeverPositioned: true)
+        // Nothing should start out focused: a keyword field with its text
+        // selected is an invitation to overtype it by accident.
+        window.makeFirstResponder(nil)
     }
 
     private func makeWindowIfNeeded() -> NSWindow {
@@ -34,9 +37,14 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.title = "DeadlineFloat Settings"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
+        window.titleVisibility = .hidden
+        // Not movable by its background: the sliders are drawn in SwiftUI,
+        // and a drag on one would otherwise drag the whole window along with
+        // it. The title bar still moves it.
+        window.isMovableByWindowBackground = false
         window.backgroundColor = .clear
         window.isOpaque = false
+        window.minSize = NSSize(width: 700, height: 520)
         window.setFrameAutosaveName("DeadlineFloatSettings")
         window.delegate = self
         window.isReleasedWhenClosed = false

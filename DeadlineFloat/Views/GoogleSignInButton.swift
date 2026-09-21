@@ -12,14 +12,14 @@ struct GoogleSignInButton: View {
     var isBusy: Bool = false
     var action: () -> Void
 
-    @Environment(\.typography) private var type
-
     private var logo: NSImage? { NSImage(named: "GoogleLogo") }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 7) {
-                if let logo {
+            HStack(spacing: 8) {
+                if isBusy {
+                    ActivitySpinner()
+                } else if let logo {
                     Image(nsImage: logo)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -27,11 +27,36 @@ struct GoogleSignInButton: View {
                         .accessibilityHidden(true)
                 }
                 Text(isBusy ? "Waiting for Google…" : "Sign in with Google")
-                    .font(.system(size: 12.5, weight: .medium))
+                    .contentTransition(.opacity)
             }
         }
-        .buttonStyle(GlassPillButtonStyle(isProminent: true))
+        .buttonStyle(GlassPillButtonStyle(isProminent: true, isLarge: true))
         .disabled(isBusy)
+        .animation(Motion.quick, value: isBusy)
         .accessibilityLabel("Sign in with Google")
+    }
+}
+
+/// A small spinner drawn in SwiftUI, so it matches the button it sits in and
+/// survives the offscreen render where AppKit's indicator would draw nothing.
+struct ActivitySpinner: View {
+    var size: CGFloat = 12
+    var color: Color = .white
+    @State private var isSpinning = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Circle()
+            .trim(from: 0.12, to: 0.88)
+            .stroke(color.opacity(0.9), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            .frame(width: size, height: size)
+            .rotationEffect(.degrees(isSpinning ? 360 : 0))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 0.85).repeatForever(autoreverses: false)) {
+                    isSpinning = true
+                }
+            }
+            .accessibilityHidden(true)
     }
 }

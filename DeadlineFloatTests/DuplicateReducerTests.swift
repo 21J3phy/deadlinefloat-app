@@ -108,7 +108,7 @@ final class DeadlineAssemblerTests: XCTestCase {
             now: now
         )
 
-        XCTAssertEqual(sections.map(\.title), ["Overdue", "Today", "Friday, September 4"])
+        XCTAssertEqual(sections.map(\.title), ["Overdue", "Due today", "Friday, September 4"])
         XCTAssertEqual(sections[0].deadlines.map(\.title), ["DUE: Passport form"])
         XCTAssertEqual(sections[0].deadlines[0].additionalCalendarNames, ["CS 18000"], "the duplicate was merged")
         XCTAssertEqual(sections[1].deadlines.map(\.title), ["SUBMIT Project 3"])
@@ -165,7 +165,7 @@ final class DeadlineAssemblerTests: XCTestCase {
             window: DateWindow(now: now, days: 2, calendar: calendar),
             now: now
         )
-        XCTAssertEqual(twoDays.map(\.title), ["Overdue", "Today"])
+        XCTAssertEqual(twoDays.map(\.title), ["Overdue", "Due today"])
     }
 
     func testEmptySnapshotProducesNoSections() {
