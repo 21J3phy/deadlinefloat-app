@@ -4,7 +4,7 @@ A bar down the edge of your Mac's screen, and an hourglass in the menu bar, for
 the Google Calendar deadlines you actually have to do something about — what is
 due today and when, what your day looks like, and the days after.
 
-**[Download DeadlineFloat 1.0 →](https://github.com/21J3phy/deadlinefloat/releases/latest)**  ·  [website](https://deadlinefloat.vercel.app/)
+**[Download DeadlineFloat 1.1 →](https://github.com/21J3phy/deadlinefloat/releases/latest)**  ·  [website](https://deadlinefloat.vercel.app/)
 
 Signed with a Developer ID certificate, notarised by Apple and stapled, so it
 opens on any Mac running macOS 14 or later without a Gatekeeper warning.

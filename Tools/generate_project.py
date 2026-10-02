@@ -25,8 +25,8 @@ BUNDLE_ID = "com.niravsurabhi.DeadlineFloat"
 DEVELOPMENT_TEAM = os.environ.get("DEADLINEFLOAT_TEAM", "GK2Z5G7FG9")
 DEPLOYMENT_TARGET = "14.0"
 SWIFT_VERSION = "6.0"
-MARKETING_VERSION = "1.0"
-BUILD_VERSION = "1"
+MARKETING_VERSION = "1.1"
+BUILD_VERSION = "2"
 # Shown in About and in the Finder's Get Info panel.
 COPYRIGHT = "Copyright © 2026 Nirav Surabhi"
 
