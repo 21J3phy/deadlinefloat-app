@@ -58,6 +58,18 @@ struct AppearanceSettingsView: View {
                     .labelsHidden()
                     .toggleStyle(.glassSwitch)
                 }
+                SettingsSeparator()
+                SettingsRow(
+                    title: "Floating pill",
+                    subtitle: "What is on now, or next, beside the bar — the one label that is always on top."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { preferences.sliverShowsFocusPill },
+                        set: { preferences.sliverShowsFocusPill = $0 }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.glassSwitch)
+                }
             }
 
             SettingsCard(title: "Type", footnote: "Scales the whole panel, not just the titles.") {

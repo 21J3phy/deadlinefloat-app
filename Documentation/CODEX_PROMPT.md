@@ -37,9 +37,11 @@ The Google account to use is **niravsurabhi@gmail.com**.
 ## Constraints — read these first
 
 - **Request exactly one scope: `https://www.googleapis.com/auth/calendar.readonly`.**
-  Do not add `calendar`, `calendar.events`, `userinfo.email`, `userinfo.profile`
-  or `openid`. The app is read-only by construction and asking for more would be
-  both wrong and a verification burden.
+  Do not add `calendar`, `userinfo.email`, `userinfo.profile` or `openid`. The
+  app reads by default and asking for more would be both wrong and a
+  verification burden. (`calendar.events` is the one exception, and only if the
+  person you are doing this for has said they want *Settings → Account → Moving
+  events* to work — see Step 4. Never add it on your own initiative.)
 - **The OAuth client must be of type "Desktop app."** A *Web application* client
   requires a registered redirect URI and will reject the loopback address the app
   uses. If the console only offers "Web application", you are on the wrong screen.
@@ -109,6 +111,19 @@ https://www.googleapis.com/auth/calendar.readonly
 It will be listed as a **sensitive** scope. That is expected. Remove anything
 else that is pre-selected — including `openid`, `.../auth/userinfo.email` and
 `.../auth/userinfo.profile` if the console adds them by default.
+
+**Only if you have been asked to enable moving events**, add a second scope:
+
+```
+https://www.googleapis.com/auth/calendar.events
+```
+
+This is what *Settings → Account → Moving events* asks for, and the app refuses
+to request it unless that setting is on. It is sensitive, not restricted, so it
+does not change the verification tier — but it does change the scope list, so an
+already-submitted verification will need updating to match. Without it on the
+consent screen, turning the setting on produces `Error 400: invalid_scope` at
+sign-in rather than a quieter failure.
 
 ## Step 5 — Publishing status
 

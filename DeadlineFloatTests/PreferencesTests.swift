@@ -26,6 +26,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.textScale, 1.0)
         XCTAssertEqual(preferences.sliverWidth, 12)
         XCTAssertFalse(preferences.sliverShowsTitles)
+        XCTAssertTrue(preferences.sliverShowsFocusPill, "the pill is the one label the collapsed bar carries")
         XCTAssertEqual(preferences.windowOpacity, 1.0)
         XCTAssertFalse(preferences.compactMode)
         XCTAssertFalse(preferences.showAllEvents)
@@ -36,8 +37,22 @@ final class PreferencesTests: XCTestCase {
         XCTAssertFalse(preferences.menuBarShowsCountdown)
         XCTAssertEqual(preferences.edge, .right)
         XCTAssertTrue(preferences.showsEdgeBar, "the bar lives at the screen edge unless turned off")
+        XCTAssertFalse(preferences.allowsEventEditing, "asking Google for more than read access is opt-in")
         XCTAssertNil(preferences.selectedCalendarIDs)
         XCTAssertEqual(preferences.filter, .default)
+    }
+
+    func testTurningEditingOnSurvivesRelaunchAndChangesWhatIsAskedFor() {
+        XCTAssertEqual(GoogleEndpoints.scopes(allowsEditing: Preferences(defaults: defaults).allowsEventEditing), GoogleEndpoints.scope)
+
+        do {
+            let preferences = Preferences(defaults: defaults)
+            preferences.allowsEventEditing = true
+        }
+
+        let reloaded = Preferences(defaults: defaults)
+        XCTAssertTrue(reloaded.allowsEventEditing)
+        XCTAssertTrue(GoogleEndpoints.scopes(allowsEditing: reloaded.allowsEventEditing).contains(GoogleEndpoints.editingScope))
     }
 
     func testSpotlightAndMenuBarChoicesSurviveRelaunch() {
@@ -53,6 +68,14 @@ final class PreferencesTests: XCTestCase {
         XCTAssertTrue(reloaded.menuBarShowsCountdown)
         XCTAssertEqual(reloaded.edge, .left)
         XCTAssertFalse(reloaded.showsEdgeBar)
+    }
+
+    func testSliverPillCanBeTurnedOffAndStaysOff() {
+        do {
+            let preferences = Preferences(defaults: defaults)
+            preferences.sliverShowsFocusPill = false
+        }
+        XCTAssertFalse(Preferences(defaults: defaults).sliverShowsFocusPill)
     }
 
     func testCompletedDeadlinesPersistAndCanBeUndone() {

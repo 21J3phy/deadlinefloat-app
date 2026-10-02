@@ -1,9 +1,12 @@
 import Foundation
 
-/// Read-only access to the Calendar v3 API.
+/// Access to the Calendar v3 API: everything read, and one thing written.
 ///
-/// Every method here issues a `GET`; `HTTPClient` rejects anything else against
-/// `www.googleapis.com`, so this type cannot be turned into a writer by accident.
+/// Every method but `reschedule` issues a `GET`, and `reschedule` issues the
+/// only `PATCH` `HTTPClient` will let through — one event's own URL, carrying
+/// nothing but its new start and end. Anything else against
+/// `www.googleapis.com` is refused there, so this type cannot be turned into a
+/// general writer by accident.
 struct GoogleCalendarClient: Sendable {
     var http: HTTPClient
     var accessTokenProvider: @Sendable () async throws -> String
@@ -81,6 +84,54 @@ struct GoogleCalendarClient: Sendable {
         } while pageToken != nil && page < pageLimit
 
         return collected
+    }
+
+    // MARK: - Moving an event
+
+    /// Writes an event's new start and end, and returns the event as Google
+    /// now holds it.
+    ///
+    /// `PATCH` rather than `PUT`: only the two times are sent, so nothing else
+    /// on the event — its guests, its description, its colour — can be lost by
+    /// writing back a copy this app assembled. `sendUpdates=none` keeps a nudge
+    /// on one's own calendar from mailing everybody invited; a change that
+    /// guests should hear about is one to make in Google Calendar itself.
+    ///
+    /// A recurring event arrives here already expanded, so the id is one
+    /// instance's and only that instance moves — the same thing Google
+    /// Calendar does when you drag one occurrence of a series.
+    @discardableResult
+    func reschedule(
+        calendarID: String,
+        eventID: String,
+        start: Date,
+        end: Date,
+        timeZone: TimeZone
+    ) async throws -> GoogleEvent {
+        let url = try Self.url(
+            pathComponents: ["calendars", calendarID, "events", eventID],
+            query: [URLQueryItem(name: "sendUpdates", value: "none")]
+        )
+        let body = try JSONEncoder().encode(
+            EventTimesPatch(
+                start: GoogleEventDateTime(
+                    dateTime: GoogleDate.rfc3339String(from: start, timeZone: timeZone),
+                    timeZone: timeZone.identifier
+                ),
+                end: GoogleEventDateTime(
+                    dateTime: GoogleDate.rfc3339String(from: end, timeZone: timeZone),
+                    timeZone: timeZone.identifier
+                )
+            )
+        )
+        let response = try await http.patchJSON(url, accessToken: try await accessTokenProvider(), body: body)
+        return try JSONDecoder().decode(GoogleEvent.self, from: response.data)
+    }
+
+    /// The whole body of the only write the app makes.
+    private struct EventTimesPatch: Encodable {
+        var start: GoogleEventDateTime
+        var end: GoogleEventDateTime
     }
 
     // MARK: - URL building

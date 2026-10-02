@@ -15,9 +15,10 @@ down the screen edge: the day as a ruler with every event drawn as long as it
 lasts, a needle for now, and what is on — or next — floating beside it with a
 live countdown. Rest the pointer on it, or click the hourglass, and the panel
 slides out: the tasks on the left, the calendar on the right, one column per
-day for one, two, three days or the week. Sign in with Google, read-only
-access, tokens in the Keychain, and no network destination other than Google's
-own endpoints.
+day for one, two, three days or the week. Drag a block to move an event, or
+pull an edge to change how long it lasts, and it is written straight back to
+Google. Sign in with Google, tokens in the Keychain, and no network
+destination other than Google's own endpoints.
 
 | At rest | One day | Three days | Compact rows |
 |---|---|---|---|
@@ -403,8 +404,13 @@ tokens no longer expire after seven days.
 ### 3 · Google verification — submitted, under review
 
 `calendar.readonly` is one of Google's **sensitive** scopes — sensitive, not
-*restricted*, so no third-party security assessment is involved. A published but
-unverified app still works, with two consequences:
+*restricted*, so no third-party security assessment is involved.
+`calendar.events`, which *Settings → Account → Moving events* adds, is
+sensitive too, so the tier does not change; but it is a **second scope on the
+consent screen**, and the consent screen must list it before Google will issue
+it. Add it to the OAuth consent screen in the Cloud console alongside the
+read-only one, and expect the verification submission to have to be updated to
+match. A published but unverified app still works, with two consequences:
 
 - a **"Google hasn't verified this app"** interstitial on first sign-in, which
   the user clears with *Advanced → Go to DeadlineFloat*;
@@ -459,7 +465,8 @@ Drop Google's official mark into `Assets.xcassets` as an image set named
 
 All users of a released build share your Cloud project's Calendar API quota. The
 default is generous relative to what this app does — a handful of `GET`s per user
-every five minutes — but it is worth knowing the meter is yours.
+every five minutes, plus one `PATCH` whenever a block is dragged — but it is
+worth knowing the meter is yours.
 
 ---
 
@@ -527,6 +534,26 @@ comes within six hours, so a row never lingers in the wrong section.
 earlier days visible. It defaults to `0`, which is the literal "today plus N
 days" window.
 
+### Which hours a day shows
+
+Each column, and the sliver, runs midnight to midnight by default: nothing is
+left out and 3 AM is where 3 AM is. Most days are not twenty-four hours long
+though, and the small hours spend a third of the height on nothing. **Settings
+→ General → Hours** sets where the day starts and ends — `7 AM` to `1 AM`, say,
+or `9 AM` to `6 PM`. The same height over fewer hours makes every block taller,
+easier to read, and easier to take hold of. Six hours is the shortest a day can
+be; ask for less and the end is pushed out rather than the choice refused.
+
+An end at or before the start means the next morning, so a day can run through
+midnight. When it does, the small hours belong to the night before: at 00:30 on
+a `7 AM – 1 AM` day the bar is still showing Wednesday.
+
+**Shortening the day hides nothing.** Every instant still belongs to exactly
+one day — there is a test that walks a whole week in half hours and checks that
+each one is claimed by one column and no more — and an event outside the hours
+shown is drawn pinned to whichever end of its own column it fell off, as well
+as appearing in the list, the countdown and the menu bar as it always did.
+
 Clicking a row, a block on the timeline, or the spotlight opens that event in
 Google Calendar in your default browser. Right-click for **Mark as Done**,
 **Copy Link** and **Copy Title**.
@@ -535,9 +562,10 @@ Google Calendar in your default browser. Right-click for **Mark as Done**,
 
 Swipe a row sideways with two fingers — either direction — and it is done: the
 row follows your fingers and uncovers a green *Done*, the trackpad taps once
-you have gone far enough, and on release the deadline leaves the list. Completion is local to this Mac — the app is
-read-only towards Google — and is remembered for thirty days, long after the
-event has left every window the app shows.
+you have gone far enough, and on release the deadline leaves the list.
+Completion is local to this Mac — nothing about it is written to Google — and
+is remembered for thirty days, long after the event has left every window the
+app shows.
 
 Completed deadlines live in a drawer *above* the list. Scroll up past the top
 of the list and keep going: there is a barrier, the trackpad taps as you cross
@@ -547,6 +575,38 @@ its default position with another tap. A short pull that does not reach the
 barrier springs back where it started. Swipe a completed row sideways, or
 right-click it, to bring it back. (The drawer's barrier needs macOS 15; on
 macOS 14 the completed section simply follows the list.)
+
+### Moving and resizing events
+
+Take hold of a block on the calendar and it moves: up and down for a different
+time, sideways for a different day. Take hold of its top or bottom edge — the
+pointer becomes a resize cursor and a small grip appears — and that edge moves
+on its own, so the event starts later or runs longer while the other end stays
+where it is. A block being dragged lifts clear of the day's layout, carries the
+time it is proposing on a capsule, and drops on a five-minute grid; hold **⌥**
+for the minute. Nothing is shorter than five minutes, and nothing leaves the
+column it was dropped on.
+
+A press that does not travel is still a click, and still opens the event in
+Google Calendar. Blocks that have no length on the grid — all-day items, which
+live in the column header — cannot be dragged. A recurring event arrives
+already expanded, so dragging one occurrence moves that occurrence, exactly as
+it does in Google Calendar.
+
+The new time is drawn the instant you let go and written to Google behind it,
+with `sendUpdates=none` so nudging your own calendar does not mail everyone
+invited. If Google refuses — a calendar you can only read, an event somebody
+else owns, no network — the block goes back where it came from and the footer
+says why. **Undo Move** is in the right-click menu of the block you last moved,
+and *Move 15 minutes later* and friends are accessibility actions on every
+block, so none of this needs a mouse.
+
+It is off until you ask for it, because it is the one feature that changes what
+Google is asked to allow. **Settings → Account → Moving events** turns it on;
+the extra permission is granted at sign-in, so the switch asks you to reconnect
+once. If you run your own Cloud project, add `.../auth/calendar.events` to the
+OAuth consent screen *before* reconnecting — a scope the consent screen does
+not list is refused at sign-in rather than quietly downgraded.
 
 ---
 
@@ -594,13 +654,19 @@ latter turns the glass into a solid window background.
 
 Full policy: [`Documentation/PRIVACY.md`](Documentation/PRIVACY.md). In short:
 
-- **One scope.** `https://www.googleapis.com/auth/calendar.readonly`. No profile,
-  no email, no `userinfo`. The account address shown in Settings is the id of
-  your primary calendar, which arrives with the calendar list — no extra
-  permission needed for it.
-- **Read-only, structurally.** Every request to `www.googleapis.com` must be a
-  `GET`; the HTTP layer throws on anything else before the request leaves the
-  process. The app cannot create, modify or delete an event.
+- **One scope, or two.** `https://www.googleapis.com/auth/calendar.readonly`
+  always. `https://www.googleapis.com/auth/calendar.events` as well when
+  *Settings → Account → Moving events* is on, which is what lets a block be
+  dragged. No profile, no email, no `userinfo`. The account address shown in
+  Settings is the id of your primary calendar, which arrives with the calendar
+  list — no extra permission needed for it.
+- **Almost read-only, structurally.** Every request to `www.googleapis.com`
+  must be a `GET`, with exactly one exception: a `PATCH` to one event's own
+  URL, carrying nothing but its new start and end. The HTTP layer checks the
+  verb *and the shape of the path* and throws on anything else before the
+  request leaves the process, so the app cannot create an event, delete one, or
+  touch a calendar or its sharing. Turn the setting off and the `GET` rule is
+  absolute again.
 - **Host allowlist.** The only reachable hosts are `oauth2.googleapis.com` and
   `www.googleapis.com`. Any other host is refused in code. There is no analytics
   endpoint to remove, because none could be reached.
@@ -631,8 +697,9 @@ DeadlineFloat/
 ├── Domain/         Pure logic — date window, RFC 3339 parsing, deadline
 │                   detection, building, de-duplication, grouping, sorting,
 │                   countdowns, colour resolution
-├── Services/       OAuth (PKCE + loopback), Keychain, the GET-only HTTP
-│                   client, the Calendar API client, repository, disk cache
+├── Services/       OAuth (PKCE + loopback), Keychain, the HTTP client that
+│                   allows a GET and one event PATCH, the Calendar API client,
+│                   repository, disk cache
 ├── Preferences/    Every setting, persisted in UserDefaults
 ├── ViewModels/     DeadlineListViewModel — refresh loop, clock tick, sections
 ├── Views/          SwiftUI: the bar, the day rail, the calendar, the pill,
@@ -713,7 +780,9 @@ Tools/run_tests.sh
 | Duplicates across calendars | `DuplicateReducerTests` |
 | The whole read pipeline | `DeadlineAssemblerTests` |
 | Google JSON decoding | `GoogleDecodingTests` |
-| Read-only + allowlist + backoff | `HTTPClientTests` |
+| Method and path guard, allowlist, backoff | `HTTPClientTests` |
+| Dragging an event to a new time | `EventEditTests` |
+| The hours a day shows, and that none are lost | `DaySpanTests` |
 | PKCE, auth URL, token expiry, loopback | `OAuthTests` |
 | OAuth client resolution and validation | `GoogleClientConfigTests` |
 | Settings persistence and clamping | `PreferencesTests` |

@@ -85,7 +85,7 @@ enum ScreenshotRenderer {
         // The pill floats beside the sliver at its tab's height, as the
         // callout window does on screen.
         let pill: AnyView
-        if !expanded, let focus = viewModel.focus {
+        if !expanded, viewModel.preferences.sliverShowsFocusPill, let focus = viewModel.focus {
             let ruler = viewModel.ruler
             let centre = ruler.contains(viewModel.now)
                 ? RulerGeometry.y(fraction: ruler.fraction(of: viewModel.now), height: barHeight)

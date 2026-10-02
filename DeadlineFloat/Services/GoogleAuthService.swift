@@ -31,8 +31,9 @@ enum AuthError: LocalizedError, Equatable {
 
 /// Owns the OAuth lifecycle: authorisation, refresh, revocation and storage.
 ///
-/// Only one scope is ever requested — `calendar.readonly` — and tokens live in
-/// the Keychain, never in `UserDefaults` or on disk.
+/// At most two scopes are ever requested: `calendar.readonly` always, and
+/// `calendar.events` only when the user has turned on dragging events about.
+/// Tokens live in the Keychain, never in `UserDefaults` or on disk.
 actor GoogleAuthService {
     private let store: TokenStoring
     private let http: HTTPClient
@@ -92,7 +93,10 @@ actor GoogleAuthService {
     // MARK: - Sign in
 
     /// Runs the loopback authorisation-code flow with PKCE.
-    func signIn() async throws {
+    ///
+    /// - Parameter allowsEditing: asks for the scope that lets an event be
+    ///   moved. Off, the consent screen shows exactly what it always showed.
+    func signIn(allowsEditing: Bool = false) async throws {
         guard configuration.isConfigured, configuration.isWellFormed else {
             throw AuthError.notConfigured
         }
@@ -113,7 +117,8 @@ actor GoogleAuthService {
             clientID: configuration.trimmedClientID,
             redirectURI: redirectURI,
             pkce: pkce,
-            state: state
+            state: state,
+            scopes: GoogleEndpoints.scopes(allowsEditing: allowsEditing)
         ) else { throw AuthError.notConfigured }
 
         Log.auth.info("Opening Google authorization page")
@@ -207,7 +212,11 @@ actor GoogleAuthService {
             if let error = decoded.error {
                 throw AuthError.refreshFailed(decoded.error_description ?? error)
             }
-            guard let refreshed = decoded.tokens(now: clock(), existingRefreshToken: tokens.refreshToken) else {
+            guard let refreshed = decoded.tokens(
+                now: clock(),
+                existingRefreshToken: tokens.refreshToken,
+                existingScope: tokens.scope
+            ) else {
                 throw AuthError.refreshFailed("no access token in refresh response")
             }
             return refreshed
@@ -254,7 +263,8 @@ actor GoogleAuthService {
         clientID: String,
         redirectURI: String,
         pkce: PKCE,
-        state: String
+        state: String,
+        scopes: String = GoogleEndpoints.scope
     ) -> URL? {
         guard !clientID.isEmpty else { return nil }
         var components = URLComponents(url: GoogleEndpoints.authorization, resolvingAgainstBaseURL: false)
@@ -262,7 +272,7 @@ actor GoogleAuthService {
             URLQueryItem(name: "client_id", value: clientID),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "scope", value: GoogleEndpoints.scope),
+            URLQueryItem(name: "scope", value: scopes),
             URLQueryItem(name: "code_challenge", value: pkce.challenge),
             URLQueryItem(name: "code_challenge_method", value: pkce.method),
             URLQueryItem(name: "state", value: state),

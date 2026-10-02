@@ -29,6 +29,10 @@ final class Preferences {
         static let edgeBarEnabled = "bar.edge.enabled"
         static let sliverWidth = "bar.sliver.width"
         static let sliverTitles = "bar.sliver.titles"
+        static let sliverPill = "bar.sliver.pill"
+        static let allowsEditing = "calendar.allowsEditing"
+        static let dayStartHour = "calendar.dayStartHour"
+        static let dayEndHour = "calendar.dayEndHour"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -54,6 +58,9 @@ final class Preferences {
     private var edgeBarEnabledStorage: Bool
     private var sliverWidthStorage: Double
     private var sliverTitlesStorage: Bool
+    private var sliverPillStorage: Bool
+    private var allowsEditingStorage: Bool
+    private var daySpanStorage: DaySpan
 
     // MARK: Init
 
@@ -79,6 +86,12 @@ final class Preferences {
         let storedSliverWidth = defaults.object(forKey: Keys.sliverWidth) as? Double ?? Self.defaultSliverWidth
         sliverWidthStorage = min(Self.sliverWidthRange.upperBound, max(Self.sliverWidthRange.lowerBound, storedSliverWidth))
         sliverTitlesStorage = defaults.bool(forKey: Keys.sliverTitles)
+        sliverPillStorage = defaults.object(forKey: Keys.sliverPill) as? Bool ?? true
+        allowsEditingStorage = defaults.bool(forKey: Keys.allowsEditing)
+        daySpanStorage = DaySpan(
+            startHour: defaults.object(forKey: Keys.dayStartHour) as? Int ?? DaySpan.wholeDay.startHour,
+            endHour: defaults.object(forKey: Keys.dayEndHour) as? Int ?? DaySpan.wholeDay.endHour
+        )
 
         // Completed ids are pruned on load so the set never grows without
         // bound; an event that old is long outside any window the app shows.
@@ -268,6 +281,52 @@ final class Preferences {
         set {
             sliverTitlesStorage = newValue
             defaults.set(newValue, forKey: Keys.sliverTitles)
+        }
+    }
+
+    /// The pill beside the sliver with what is on now, or next. It is the
+    /// one label the collapsed bar carries, and it floats above other
+    /// windows, so it can be turned off and leave only the ruler.
+    var sliverShowsFocusPill: Bool {
+        get { sliverPillStorage }
+        set {
+            sliverPillStorage = newValue
+            defaults.set(newValue, forKey: Keys.sliverPill)
+        }
+    }
+
+    // MARK: Editing
+
+    /// Whether blocks on the calendar can be dragged to a new time.
+    ///
+    /// This is the one setting that changes what Google is asked to allow, so
+    /// it starts off: the app requests the read-only scope it has always
+    /// requested and is incapable of changing anything until somebody asks for
+    /// more. Turning it on takes effect at the next connection, because the
+    /// permission is granted at sign-in — and the OAuth consent screen must
+    /// already list the editing scope, or Google will refuse the sign-in
+    /// rather than quietly grant less.
+    var allowsEventEditing: Bool {
+        get { allowsEditingStorage }
+        set {
+            allowsEditingStorage = newValue
+            defaults.set(newValue, forKey: Keys.allowsEditing)
+        }
+    }
+
+    // MARK: The day the ruler draws
+
+    /// The hours the ruler and the calendar show.
+    ///
+    /// Stored as two plain hours rather than an encoded value, so the
+    /// preference is legible in `defaults read` and a nonsense pair recorded
+    /// by hand is repaired by `DaySpan` on the way in rather than crashing.
+    var daySpan: DaySpan {
+        get { daySpanStorage }
+        set {
+            daySpanStorage = newValue
+            defaults.set(newValue.startHour, forKey: Keys.dayStartHour)
+            defaults.set(newValue.endHour, forKey: Keys.dayEndHour)
         }
     }
 

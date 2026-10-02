@@ -93,9 +93,11 @@ struct RetryPolicy: Sendable, Equatable {
 ///   Calendar endpoints is refused, so calendar data cannot be sent anywhere
 ///   else, deliberately or otherwise. There is no analytics endpoint to remove
 ///   because none can be reached.
-/// * **Read-only Calendar access** — any request to the Calendar API must be a
-///   `GET`. The app is structurally incapable of creating, editing or deleting
-///   an event.
+/// * **Almost read-only Calendar access** — a request to the Calendar API must
+///   be a `GET`, with one exception: a `PATCH` to one event's own URL, which is
+///   how a block dragged on the calendar is written back. Nothing else passes,
+///   so the app remains structurally incapable of creating an event, deleting
+///   one, or touching a calendar or its sharing.
 struct HTTPClient: Sendable {
     var transport: HTTPPerforming
     var allowedHosts: Set<String>
@@ -121,14 +123,48 @@ struct HTTPClient: Sendable {
         self.jitterProvider = jitterProvider
     }
 
-    /// Hosts on which only `GET` is ever acceptable.
-    static let readOnlyHosts: Set<String> = ["www.googleapis.com"]
+    /// Hosts on which writes are restricted to the one shape below.
+    static let restrictedHosts: Set<String> = ["www.googleapis.com"]
+
+    /// The only write the app can make: `PATCH /calendar/v3/calendars/{id}/events/{id}`.
+    ///
+    /// Checking the shape of the path, and not merely the verb, is what keeps
+    /// the permission as narrow as the feature that needs it — a `PATCH` to a
+    /// calendar, an ACL or the event list is refused just as a `DELETE` is.
+    static func isPermitted(method: String, url: URL) -> Bool {
+        switch method.uppercased() {
+        case "GET":
+            return true
+        case "PATCH":
+            let components = url.pathComponents
+            guard components.count == 7 else { return false }
+            return components[1] == "calendar"
+                && components[2] == "v3"
+                && components[3] == "calendars"
+                && !components[4].isEmpty
+                && components[5] == "events"
+                && !components[6].isEmpty
+        default:
+            return false
+        }
+    }
 
     func get(_ url: URL, accessToken: String?) async throws -> HTTPResponse {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let accessToken { request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization") }
+        return try await send(request)
+    }
+
+    /// JSON PATCH, used only to write one event's new start and end.
+    func patchJSON(_ url: URL, accessToken: String, body: Data) async throws -> HTTPResponse {
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
         return try await send(request)
     }
 
@@ -207,10 +243,10 @@ struct HTTPClient: Sendable {
         guard allowedHosts.contains(host) else {
             throw APIError.disallowedRequest(host)
         }
-        if Self.readOnlyHosts.contains(host) {
+        if Self.restrictedHosts.contains(host) {
             let method = (request.httpMethod ?? "GET").uppercased()
-            guard method == "GET" else {
-                throw APIError.disallowedRequest("\(method) is not permitted on \(host)")
+            guard Self.isPermitted(method: method, url: url) else {
+                throw APIError.disallowedRequest("\(method) \(url.path) is not permitted on \(host)")
             }
         }
     }

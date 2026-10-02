@@ -29,6 +29,13 @@ final class DeadlineListViewModel {
     /// Ids of everything marked done, for the schedule and the strip.
     private(set) var completedIDs: Set<String> = []
 
+    /// Google has granted the scope that lets an event be moved. Until it
+    /// has, blocks are drawn but cannot be dragged.
+    private(set) var hasEditingGrant = false
+
+    /// The last event this app moved, so it can be put back.
+    private(set) var lastMove: UndoableMove?
+
     private(set) var calendars: [GoogleCalendarListEntry] = []
     private(set) var syncState = SyncState.initial
     private(set) var isSignedIn = false
@@ -37,6 +44,11 @@ final class DeadlineListViewModel {
 
     /// Non-fatal message shown in the sign-in card, e.g. a failed sign-in attempt.
     var transientMessage: String?
+
+    /// Whether clicking that message should offer a reconnection — a sign-in
+    /// that failed — or merely dismiss it, as a move that could not be written
+    /// while offline should.
+    private(set) var transientMessageIsReconnect = true
 
     /// True while the browser has the sign-in and the loopback listener is open.
     private(set) var isSigningIn = false
@@ -62,6 +74,13 @@ final class DeadlineListViewModel {
     /// The widest window already fetched, so narrowing the range never refetches.
     @ObservationIgnored private var fetchedRangeDays = 0
     @ObservationIgnored private var fetchedLookbackDays = 0
+    /// Moves that have been drawn but not yet confirmed by Google, by deadline
+    /// id. They are laid over the snapshot on every rebuild, so a refresh that
+    /// lands mid-flight cannot drag a block back to where it was.
+    @ObservationIgnored private var pendingMoves: [String: EventMove] = [:]
+    /// Bumped per event on every drop, so a slow answer to an earlier drag
+    /// cannot overwrite a later one.
+    @ObservationIgnored private var moveGeneration: [String: Int] = [:]
 
     // MARK: Init
 
@@ -164,6 +183,13 @@ final class DeadlineListViewModel {
         return max(preferences.overdueLookbackDays, wakingDayIsYesterday ? 1 : 0)
     }
 
+    /// Changing the hours the ruler draws can move which day the bar is on,
+    /// and a waking day that starts yesterday needs yesterday fetched.
+    func daySpanChanged() {
+        rebuild()
+        if effectiveLookbackDays > fetchedLookbackDays { refresh() }
+    }
+
     /// The local midnight of each day the calendar shows: first the day the
     /// sliver is on, so the two agree and the needle is where the sliver's
     /// is, then the rest of the range.
@@ -179,7 +205,7 @@ final class DeadlineListViewModel {
     }
 
     /// The stretch of the day the edge ruler shows right now.
-    var ruler: RulerSpan { RulerSpan.current(now: now, calendar: calendar) }
+    var ruler: RulerSpan { RulerSpan.current(now: now, calendar: calendar, span: preferences.daySpan) }
 
 
     var formatter: DeadlineFormatter { DeadlineFormatter(calendar: calendar) }
@@ -275,13 +301,15 @@ final class DeadlineListViewModel {
 
         await auth.updateConfiguration(preferences.clientConfiguration)
         do {
-            try await auth.signIn()
+            try await auth.signIn(allowsEditing: preferences.allowsEventEditing)
             isSignedIn = true
             syncState.problem = nil
+            hasEditingGrant = GoogleEndpoints.grants(editing: await auth.grantedScope())
             refresh()
         } catch is CancellationError {
             // The user closed the browser tab or pressed Cancel; nothing to report.
         } catch {
+            transientMessageIsReconnect = true
             transientMessage = error.localizedDescription
             Log.auth.error("Sign-in failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -304,6 +332,10 @@ final class DeadlineListViewModel {
         focus = nil
         accountLabel = nil
         isSignedIn = false
+        hasEditingGrant = false
+        lastMove = nil
+        pendingMoves.removeAll()
+        moveGeneration.removeAll()
         fetchedRangeDays = 0
         fetchedLookbackDays = 0
         syncState = SyncState(isRefreshing: false, lastSuccessfulRefresh: nil, problem: .notSignedIn)
@@ -313,6 +345,136 @@ final class DeadlineListViewModel {
     func open(_ deadline: Deadline) {
         guard let link = deadline.link else { return }
         NSWorkspace.shared.open(link)
+    }
+
+    // MARK: Editing
+
+    /// One move already made, kept so it can be put back.
+    struct UndoableMove: Equatable, Sendable {
+        var deadlineID: String
+        var title: String
+        /// Where the event was before the drag.
+        var previous: EventMove
+    }
+
+    /// Whether blocks on the calendar can be dragged right now: the setting is
+    /// on, somebody is signed in, and Google granted the scope that allows it.
+    ///
+    /// A demo run needs no grant and keeps the change to itself — there is no
+    /// account behind it to write to.
+    var canEditEvents: Bool {
+        guard preferences.allowsEventEditing else { return false }
+        return isDemo || (isSignedIn && hasEditingGrant)
+    }
+
+    /// Editing is wanted but not yet permitted — the sign-in predates it, or
+    /// consent was refused. Settings offers a reconnection when this is true.
+    var needsEditingPermission: Bool {
+        preferences.allowsEventEditing && isSignedIn && !hasEditingGrant && !isDemo
+    }
+
+    /// The snapshot with any moves still in flight laid over it. Everything
+    /// the panel shows is derived from this rather than the raw snapshot, so a
+    /// dropped block stays where it was dropped even if a scheduled refresh
+    /// lands before Google has confirmed the change.
+    private var effectiveSnapshot: CalendarSnapshot {
+        guard !pendingMoves.isEmpty else { return snapshot }
+        return snapshot.applying(Array(pendingMoves.values), timeZone: calendar.timeZone)
+    }
+
+    /// Moves an event, or changes how long it lasts.
+    ///
+    /// The new time is drawn immediately and written to Google behind it. If
+    /// Google refuses — a read-only calendar, an event somebody else owns, no
+    /// network — the block goes back where it came from and the footer says
+    /// why, so a failure is never silent and never leaves the two out of step.
+    func reschedule(_ deadline: Deadline, start: Date, end: Date) {
+        guard canEditEvents, let move = EventEdit.move(for: deadline, proposal: .init(start: start, end: end)) else { return }
+        guard let previous = EventEdit.reverse(of: deadline) else { return }
+
+        let id = move.deadlineID
+        let generation = (moveGeneration[id] ?? 0) + 1
+        moveGeneration[id] = generation
+        pendingMoves[id] = move
+        lastMove = UndoableMove(deadlineID: id, title: deadline.title, previous: previous)
+        transientMessage = nil
+        rebuild()
+
+        // A demo has nowhere to send it; the drawing is the whole of it.
+        guard !isDemo else {
+            snapshot = snapshot.applying([move], timeZone: calendar.timeZone)
+            pendingMoves.removeValue(forKey: id)
+            rebuild()
+            return
+        }
+
+        let timeZone = calendar.timeZone
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let updated = try await repository.reschedule(move, timeZone: timeZone)
+                guard self.moveGeneration[id] == generation else { return }
+                self.snapshot = updated
+                self.pendingMoves.removeValue(forKey: id)
+                self.rebuild()
+            } catch {
+                guard self.moveGeneration[id] == generation else { return }
+                self.pendingMoves.removeValue(forKey: id)
+                if self.lastMove?.deadlineID == id { self.lastMove = nil }
+                let needsReconnect = Self.isAuthFailure(error)
+                self.transientMessageIsReconnect = needsReconnect
+                self.show(message: Self.moveFailureMessage(for: error))
+                if needsReconnect { self.hasEditingGrant = false }
+                Log.sync.error("Could not move event: \(error.localizedDescription, privacy: .public)")
+                self.rebuild()
+            }
+        }
+    }
+
+    /// Whether this block is the one that could be put back.
+    func canUndoMove(of deadline: Deadline) -> Bool {
+        canEditEvents && lastMove?.deadlineID == deadline.id
+    }
+
+    /// Puts the last moved event back where it was.
+    func undoLastMove() {
+        guard canEditEvents, let undo = lastMove,
+              let deadline = agenda.first(where: { $0.id == undo.deadlineID })
+        else { return }
+        lastMove = nil
+        reschedule(deadline, start: undo.previous.start, end: undo.previous.end)
+        // Putting an event back is not itself something to undo.
+        lastMove = nil
+    }
+
+    /// Puts a message in the footer and takes it away again, so an explanation
+    /// of one failed drag does not sit there for the rest of the day.
+    private func show(message: String, seconds: TimeInterval = 8) {
+        transientMessage = message
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, self.transientMessage == message else { return }
+            self.transientMessage = nil
+        }
+    }
+
+    nonisolated static func isAuthFailure(_ error: Error) -> Bool {
+        if case APIError.unauthorized = error { return true }
+        if case APIError.notSignedIn = error { return true }
+        return false
+    }
+
+    nonisolated static func moveFailureMessage(for error: Error) -> String {
+        switch error {
+        case APIError.unauthorized:
+            return "Reconnect to move events"
+        case APIError.offline:
+            return "Offline — the event did not move"
+        case APIError.server(let status, let message) where status == 403:
+            return message.isEmpty ? "That calendar is read-only" : message
+        default:
+            return "Could not move that event"
+        }
     }
 
     // MARK: Completion
@@ -386,6 +548,8 @@ final class DeadlineListViewModel {
     private func refreshSignInState() async {
         let signedIn = await auth.isSignedIn()
         isSignedIn = signedIn
+        let scope = await auth.grantedScope()
+        hasEditingGrant = signedIn && GoogleEndpoints.grants(editing: scope)
         if !signedIn { syncState.problem = .notSignedIn }
     }
 
@@ -397,8 +561,9 @@ final class DeadlineListViewModel {
             configuration: preferences.filter,
             mergeDuplicates: preferences.mergeDuplicates
         )
+        let source = effectiveSnapshot
         let partition = assembler.partition(
-            from: snapshot,
+            from: source,
             selectedCalendarIDs: preferences.selectedCalendarIDs,
             completed: preferences.completedDeadlines,
             window: window,
@@ -408,7 +573,7 @@ final class DeadlineListViewModel {
         if updated != sections { sections = updated }
         if partition.completed != completed { completed = partition.completed }
 
-        let schedule = assembler.agenda(from: snapshot, selectedCalendarIDs: preferences.selectedCalendarIDs, window: fetchWindow)
+        let schedule = assembler.agenda(from: source, selectedCalendarIDs: preferences.selectedCalendarIDs, window: fetchWindow)
         if schedule != agenda { agenda = schedule }
         let done = Set(preferences.completedDeadlines.keys)
         if done != completedIDs { completedIDs = done }

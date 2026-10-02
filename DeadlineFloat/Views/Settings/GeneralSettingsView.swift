@@ -8,6 +8,60 @@ struct GeneralSettingsView: View {
 
     private var preferences: Preferences { viewModel.preferences }
 
+    /// Which hours of each day the ruler and the calendar draw.
+    ///
+    /// Shortening the day does not hide anything: an event outside the hours
+    /// shown is drawn pinned to the end of its own column it fell off, and
+    /// still appears in the list, the countdown and the menu bar.
+    private var hoursCard: some View {
+        let span = preferences.daySpan
+        return SettingsCard(
+            title: "Hours",
+            footnote: "The same height over fewer hours makes every block taller and easier to read — and to drag. Six hours is the shortest a day can be. Anything outside the hours shown is still counted, and still drawn, pinned to the end of its day."
+        ) {
+            SettingsRow(title: "Day starts at") {
+                GlassStepper(
+                    value: Binding(
+                        get: { preferences.daySpan.startHour },
+                        set: { setSpan(DaySpan(startHour: $0, endHour: preferences.daySpan.endHour)) }
+                    ),
+                    range: 0...23,
+                    format: { viewModel.formatter.hourLabel(hour: $0) }
+                )
+            }
+            SettingsSeparator()
+            SettingsRow(title: "Day ends at", subtitle: endsSubtitle) {
+                GlassStepper(
+                    value: Binding(
+                        get: { preferences.daySpan.endHour },
+                        set: { setSpan(DaySpan(startHour: preferences.daySpan.startHour, endHour: $0)) }
+                    ),
+                    range: 0...23,
+                    format: { viewModel.formatter.hourLabel(hour: $0) }
+                )
+            }
+            SettingsSeparator()
+            SettingsRow(
+                title: viewModel.formatter.spanLabel(span),
+                subtitle: span.hours == 1 ? "1 hour on the ruler" : "\(span.hours) hours on the ruler"
+            ) {
+                Button("Whole day") { setSpan(.wholeDay) }
+                    .buttonStyle(SettingsButtonStyle())
+                    .disabled(span.isWholeDay)
+            }
+        }
+    }
+
+    private var endsSubtitle: String? {
+        preferences.daySpan.wraps && !preferences.daySpan.isWholeDay ? "The next morning — the day runs through midnight." : nil
+    }
+
+    private func setSpan(_ span: DaySpan) {
+        preferences.daySpan = span
+        viewModel.daySpanChanged()
+        AppEvents.windowPreferencesChanged()
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             SettingsCard(
@@ -39,6 +93,8 @@ struct GeneralSettingsView: View {
                     )
                 }
             }
+
+            hoursCard
 
             SettingsCard(title: "Refreshing", footnote: "The window also refreshes on wake, at midnight, and whenever the time zone changes.") {
                 SettingsRow(title: "Refresh every", subtitle: "A manual refresh is always one click away in the header.") {

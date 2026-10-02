@@ -148,11 +148,16 @@ struct EdgeBarView: View {
             hoveredID: hoveredID,
             screenSide: isDocked && !isRight ? .leading : .trailing,
             showsSliverTitles: isDocked && preferences.sliverShowsTitles,
+            daySpan: preferences.daySpan,
+            canEdit: viewModel.canEditEvents,
+            undoableID: viewModel.lastMove?.deadlineID,
             onOpen: { viewModel.open($0) },
             onCopyLink: { viewModel.copyLink($0) },
             onCopyTitle: { viewModel.copyTitle($0) },
             onToggleCompleted: { viewModel.toggleCompleted($0) },
-            onHover: hovered
+            onHover: hovered,
+            onReschedule: { viewModel.reschedule($0, start: $1, end: $2) },
+            onUndoMove: { viewModel.undoLastMove() }
         )
     }
 

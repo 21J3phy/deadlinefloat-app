@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DeadlineFloat — your deadlines, always in view</title>
-<meta name="description" content="A twelve-point bar down the edge of your Mac's screen for your Google Calendar deadlines: what is due today and when, and what your day looks like. Native SwiftUI, read-only access, nothing leaves your Mac.">
+<meta name="description" content="A twelve-point bar down the edge of your Mac's screen for your Google Calendar deadlines: what is due today and when, and what your day looks like. Native SwiftUI, drag to reschedule, nothing leaves your Mac.">
 <meta name="theme-color" content="#07070b">
 <link rel="icon" href="favicon.png" type="image/png">
 <meta property="og:title" content="DeadlineFloat — your deadlines, always in view">
@@ -181,6 +181,11 @@ a7cd8cb5be1b247f8884b19ffd65fd2b9474af6f72009215a0632fbb10e7b08f  DeadlineFloat-
         <p>Daylight saving, midnight versus noon, recurring series, multi-day all-day events, duplicates across calendars, going offline, and Google's rate limits — all handled, all covered by tests.</p>
       </div>
       <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="4" width="11" height="16" rx="2.4"/><path d="M9.5 8h5"/><path d="M9.5 16h5"/></svg></div>
+        <h3>Drag to reschedule</h3>
+        <p>Take hold of a block and it moves — up and down for a different time, sideways for a different day. Take hold of an edge and only that edge moves. It snaps to five minutes, ⌥ gets you the minute, and the new time goes back to Google the moment you let go. Off until you ask for it, because it is the one thing that needs more than read access.</p>
+      </div>
+      <div class="card reveal">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="M8.5 9.5 12 13l3.5-3.5"/><rect x="4" y="15" width="16" height="6" rx="2"/></svg></div>
         <h3>Works offline</h3>
         <p>The last sync is cached inside the app's own sandbox container, so the window still tells you what is due on a train with no signal. It refreshes every five minutes, on wake from sleep, and whenever the day or the time zone changes underneath it.</p>
@@ -220,7 +225,7 @@ a7cd8cb5be1b247f8884b19ffd65fd2b9474af6f72009215a0632fbb10e7b08f  DeadlineFloat-
       <p class="eyebrow">What it can see</p>
       <h2>One scope. Two hosts. No server.</h2>
       <p class="lede">
-        DeadlineFloat has no backend to send anything to. The read-only limit is not a
+        DeadlineFloat has no backend to send anything to. What it may ask Google for is not a
         promise in a policy — it is enforced in the code that makes the request.
       </p>
       <ul class="privacy-list">
@@ -231,6 +236,10 @@ a7cd8cb5be1b247f8884b19ffd65fd2b9474af6f72009215a0632fbb10e7b08f  DeadlineFloat-
         <li>
           <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
           <span><b>Read-only by construction.</b> Every Calendar API request must be a <code>GET</code>, enforced in code, so the app cannot create, change or delete an event even if it wanted to.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          <span><b>Dragging events is opt-in.</b> Turn on <em>Moving events</em> and the app asks for <code>calendar.events</code> as well — and still permits itself exactly one write: a <code>PATCH</code> of one event's start and end. Never a create, never a delete, never a calendar.</span>
         </li>
         <li>
           <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
@@ -251,7 +260,7 @@ a7cd8cb5be1b247f8884b19ffd65fd2b9474af6f72009215a0632fbb10e7b08f  DeadlineFloat-
         <li class="reveal">Open the disk image and drag <strong>DeadlineFloat</strong> into <strong>Applications</strong>. Launch at Login only works from there.</li>
         <li class="reveal">Open it. A sliver appears down the edge of each display and an hourglass appears in the menu bar.</li>
         <li class="reveal">Press <strong>Sign in with Google</strong>. Your browser does the signing in — DeadlineFloat never sees your password.</li>
-        <li class="reveal">Google asks to allow one thing: <em>see and download any calendar you can access</em>. That is the whole request.</li>
+        <li class="reveal">Google asks to allow one thing: <em>see and download any calendar you can access</em>. That is the whole request, unless you later turn on <em>Moving events</em>.</li>
       </ol>
       <p class="note reveal">
         <strong>While the app is in Google's review queue</strong> you will see a “Google hasn't

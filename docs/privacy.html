@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy Policy — DeadlineFloat</title>
-<meta name="description" content="What DeadlineFloat does with your data: one read-only Google Calendar scope, everything stored on your Mac, nothing sent anywhere but Google.">
+<meta name="description" content="What DeadlineFloat does with your data: a read-only Google Calendar scope, an optional one that only lets an event be moved, everything stored on your Mac, nothing sent anywhere but Google.">
 <meta name="theme-color" content="#07070b">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="stylesheet" href="site.css">
@@ -56,13 +56,14 @@
   <header>
     <a class="back" href="index.html">← DeadlineFloat</a>
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated 30 August 2026</p>
+    <p class="updated">Last updated 21 September 2026</p>
   </header>
 
   <div class="lead">
     <p><strong>The short version.</strong> DeadlineFloat runs entirely on your Mac. It reads your
-    calendars from Google and displays them. It sends nothing anywhere else. There is no server,
-    no account, no analytics and no telemetry.</p>
+    calendars from Google and displays them. If you turn on <em>Moving events</em>, it can also
+    change when one of your events starts and ends — nothing else. It sends nothing anywhere but
+    Google. There is no server, no account, no analytics and no telemetry.</p>
   </div>
 
   <h2>What it accesses</h2>
@@ -70,9 +71,25 @@
   <p><code>https://www.googleapis.com/auth/calendar.readonly</code></p>
   <p>Google describes this as <em>“See and download any calendar you can access using your Google
   Calendar.”</em> It grants read access only. It does not permit creating, modifying or deleting
-  calendars or events, and DeadlineFloat additionally enforces this in its own code: every request
-  it makes to the Google Calendar API must be an HTTP <code>GET</code>, and any other method is
-  rejected before the request leaves your Mac.</p>
+  calendars or events.</p>
+
+  <h3>The optional second scope</h3>
+  <p><em>Settings → Account → Moving events</em> is <strong>off by default</strong>. Turning it on,
+  and reconnecting, adds one more scope:</p>
+  <p><code>https://www.googleapis.com/auth/calendar.events</code></p>
+  <p>Google describes this as <em>“View and edit events on all your calendars.”</em> It is what
+  allows a block on the calendar to be dragged to a different time or a different day, or its edges
+  pulled to change how long it lasts.</p>
+  <p>DeadlineFloat narrows that permission much further in its own code than Google narrows it.
+  Every request it makes to the Google Calendar API must be an HTTP <code>GET</code>, with exactly
+  one exception: an HTTP <code>PATCH</code> addressed to a single event's own URL, whose entire body
+  is that event's new start and end. The network layer checks the method <em>and the shape of the
+  path</em> and rejects anything else before the request leaves your Mac. The app therefore cannot
+  create an event, delete an event, change an event's title, guests or description, or alter a
+  calendar or its sharing — whether or not the setting is on. With the setting off, the
+  <code>GET</code> rule is absolute.</p>
+  <p>When an event is moved, the request is sent with <code>sendUpdates=none</code>, so rescheduling
+  something on your own calendar does not email its guests.</p>
   <p>No other scope is requested. DeadlineFloat does not ask for your name, email address, profile,
   contacts, or any other Google service.</p>
   <p>From the Calendar API it reads:</p>
@@ -85,6 +102,8 @@
   </ul>
   <p>Calendars you have not ticked in Settings are never requested, so their events never leave
   Google.</p>
+  <p>The only thing it ever writes back is an event's start and end, and only when you have turned
+  <em>Moving events</em> on and dragged that event yourself.</p>
 
   <h2>Where your data goes</h2>
   <p>Nowhere but Google.</p>

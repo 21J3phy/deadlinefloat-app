@@ -48,7 +48,14 @@ struct TaskPaneView: View {
                 showsProblem: contentState != .signIn,
                 message: contentState == .signIn ? nil : viewModel.transientMessage,
                 onRetry: { viewModel.refresh() },
-                onReconnect: { Task { await viewModel.signIn() } }
+                onReconnect: { Task { await viewModel.signIn() } },
+                onMessage: {
+                    if viewModel.transientMessageIsReconnect {
+                        Task { await viewModel.signIn() }
+                    } else {
+                        viewModel.transientMessage = nil
+                    }
+                }
             )
         }
     }

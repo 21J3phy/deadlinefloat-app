@@ -14,6 +14,7 @@ struct AccountSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             connectionCard
+            editingCard
             scopeCard
             advancedCard
         }
@@ -106,13 +107,58 @@ struct AccountSettingsView: View {
         return "Sign-in happens in your default browser and returns to a listener on 127.0.0.1 that closes the moment it has an answer. Your password never reaches this app."
     }
 
+    // MARK: - Editing
+
+    private var editingCard: some View {
+        SettingsCard(
+            title: "Moving events",
+            footnote: "The permission is granted at sign-in, so turning this on takes effect the next time you connect. Turn it off and DeadlineFloat asks Google for read-only access again and cannot change anything at all."
+        ) {
+            SettingsRow(
+                title: "Let me drag events on the calendar",
+                subtitle: "Drag a block to move it, or its top or bottom edge to change how long it lasts. Hold ⌥ for times off the five-minute grid."
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { preferences.allowsEventEditing },
+                    set: { preferences.allowsEventEditing = $0 }
+                ))
+                .labelsHidden()
+                .toggleStyle(.glassSwitch)
+            }
+
+            if viewModel.needsEditingPermission {
+                SettingsSeparator()
+                SettingsBlock {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: Symbols.editing)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Palette.imminent)
+                            .padding(.top, 1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Reconnect to finish turning this on")
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text("This connection was made before editing was asked for, so Google has only granted read access. Blocks stay where they are until you reconnect.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 8)
+                        Button("Reconnect") { Task { await viewModel.signIn() } }
+                            .buttonStyle(SettingsButtonStyle(isProminent: true))
+                            .disabled(viewModel.isSigningIn)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Scope
 
     private var scopeCard: some View {
         SettingsCard(title: "What DeadlineFloat can see") {
             SettingsBlock {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Google asks you to allow one thing:")
+                    Text(preferences.allowsEventEditing ? "Google asks you to allow two things:" : "Google asks you to allow one thing:")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                     Text("“\(GoogleEndpoints.scopeDescription)”")
@@ -122,11 +168,25 @@ struct AccountSettingsView: View {
                         .font(.system(size: 10.5))
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
+                    if preferences.allowsEventEditing {
+                        Text("“\(GoogleEndpoints.editingScopeDescription)”")
+                            .font(.system(size: 12.5, weight: .medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 5)
+                        Text(GoogleEndpoints.editingScope)
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
                 }
             }
             SettingsSeparator()
             SettingsBlock {
-                privacyLine("Read-only. The app can never create, change or delete an event — the network layer refuses any request to the Calendar API that is not a GET.")
+                if preferences.allowsEventEditing {
+                    privacyLine("The only change the app can make is an event's start and end. The network layer refuses every request to the Calendar API except a GET and a PATCH of one event's own times — it cannot create an event, delete one, or touch a calendar.")
+                } else {
+                    privacyLine("Read-only. The app can never create, change or delete an event — the network layer refuses any request to the Calendar API that is not a GET.")
+                }
                 privacyLine("Tokens are stored in the macOS Keychain, never on disk in the clear.")
                 privacyLine("The only hosts DeadlineFloat contacts are Google's own. Every other host is blocked in code.")
                 privacyLine("No analytics, no telemetry, no crash reporting. Calendar data never leaves this Mac except back to Google.")

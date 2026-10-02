@@ -111,6 +111,26 @@ enum GoogleDate {
         return nil
     }
 
+    /// RFC 3339 in a given zone — `2026-09-21T14:30:00-04:00` — which is the
+    /// shape the Calendar API wants when an event's time is written back.
+    ///
+    /// The offset is the one in force at that instant, so a time written on
+    /// either side of a daylight-saving change is the time the user asked for.
+    static func rfc3339String(from date: Date, timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        let offset = timeZone.secondsFromGMT(for: date)
+        let sign = offset < 0 ? "-" : "+"
+        let magnitude = abs(offset)
+        return String(
+            format: "%04d-%02d-%02dT%02d:%02d:%02d%@%02d:%02d",
+            c.year ?? 1970, c.month ?? 1, c.day ?? 1,
+            c.hour ?? 0, c.minute ?? 0, c.second ?? 0,
+            sign, magnitude / 3_600, (magnitude % 3_600) / 60
+        )
+    }
+
     /// UTC RFC 3339 rendering used for `timeMin` / `timeMax` query parameters.
     static func rfc3339String(from date: Date) -> String {
         var calendar = Calendar(identifier: .gregorian)

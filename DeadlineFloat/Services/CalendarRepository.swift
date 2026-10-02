@@ -1,6 +1,8 @@
 import Foundation
 
-/// Fetches one refresh worth of calendar data and keeps the offline copy current.
+/// Fetches one refresh worth of calendar data, keeps the offline copy current,
+/// and writes back the one change the app can make — an event moved or
+/// stretched on the calendar.
 ///
 /// Failure handling is deliberate rather than incidental:
 ///
@@ -108,6 +110,28 @@ actor CalendarRepository {
             Log.sync.notice("Refreshed with \(failures.count, privacy: .public) calendar(s) served from cache")
         }
         return updated
+    }
+
+    // MARK: - Moving an event
+
+    /// Writes a moved event to Google and folds the answer back into the
+    /// offline copy, so a relaunch before the next refresh still shows the
+    /// event where it was left rather than where it used to be.
+    ///
+    /// Nothing is written locally on failure: the caller is the one holding
+    /// the optimistic drawing, and it puts the block back.
+    func reschedule(_ move: EventMove, timeZone: TimeZone) async throws -> CalendarSnapshot {
+        let updated = try await client.reschedule(
+            calendarID: move.calendarID,
+            eventID: move.eventID,
+            start: move.start,
+            end: move.end,
+            timeZone: timeZone
+        )
+        snapshot = snapshot.replacing(updated, inCalendar: move.calendarID)
+        cache.save(snapshot)
+        Log.sync.info("Moved one event")
+        return snapshot
     }
 
     // MARK: - Private

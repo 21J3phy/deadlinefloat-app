@@ -122,7 +122,7 @@ struct GoogleClientConfig: Sendable, Equatable {
     }
 }
 
-/// OAuth and API endpoints, and the single scope the app asks for.
+/// OAuth and API endpoints, and the scopes the app asks for.
 enum GoogleEndpoints {
     static let authorization = URL(string: "https://accounts.google.com/o/oauth2/v2/auth")!
     static let token = URL(string: "https://oauth2.googleapis.com/token")!
@@ -136,6 +136,32 @@ enum GoogleEndpoints {
     /// What Google's consent screen calls this scope, so the app can say the
     /// same thing before sending anyone there.
     static let scopeDescription = "See and download any calendar you can access using your Google Calendar"
+
+    /// The second scope, asked for only when dragging events is turned on.
+    ///
+    /// It is the narrowest one Google offers that allows an event to be
+    /// changed: it reaches events and nothing else — not the calendar list,
+    /// not sharing, not settings. `HTTPClient` narrows it much further still,
+    /// to a `PATCH` of one event's times.
+    static let editingScope = "https://www.googleapis.com/auth/calendar.events"
+
+    static let editingScopeDescription = "View and edit events on all your calendars"
+
+    /// What is sent to the consent screen. Reading always; editing only when
+    /// the user has asked for it, so nobody is shown a permission for a
+    /// feature they have turned off.
+    static func scopes(allowsEditing: Bool) -> String {
+        allowsEditing ? "\(scope) \(editingScope)" : scope
+    }
+
+    /// Whether a granted scope string — Google returns the scopes it actually
+    /// issued, which need not be the ones asked for — permits editing.
+    static func grants(editing scope: String?) -> Bool {
+        guard let scope else { return false }
+        return scope.split(separator: " ").contains { granted in
+            granted == editingScope || granted == "https://www.googleapis.com/auth/calendar"
+        }
+    }
 
     /// Every host the app is permitted to contact. `HTTPClient` refuses anything
     /// else, so calendar data cannot leave for a third party even by mistake.

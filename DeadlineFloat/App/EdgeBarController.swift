@@ -336,11 +336,13 @@ final class EdgeBarController: NSObject, NSWindowDelegate {
     // MARK: - Callout
 
     /// Re-registers with Observation whenever the focus or the clock changes,
-    /// so the pill follows its event down the ruler.
+    /// so the pill follows its event down the ruler — and whenever the
+    /// setting that shows it at all is flipped.
     private func observeCallout() {
         withObservationTracking {
             _ = viewModel.focus?.item.id
             _ = viewModel.now
+            _ = preferences.sliverShowsFocusPill
         } onChange: {
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -351,7 +353,8 @@ final class EdgeBarController: NSObject, NSWindowDelegate {
     }
 
     private func updateCallout() {
-        guard isVisible, !state.isExpanded, !isSettling, let focus = viewModel.focus, let screen else {
+        guard isVisible, !state.isExpanded, !isSettling, preferences.sliverShowsFocusPill,
+              let focus = viewModel.focus, let screen else {
             callout.orderOut(nil)
             return
         }

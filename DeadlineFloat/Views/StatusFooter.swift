@@ -16,6 +16,8 @@ struct StatusFooter: View {
     let message: String?
     var onRetry: () -> Void
     var onReconnect: () -> Void
+    /// What the message chip does when clicked — reconnect, or just go away.
+    var onMessage: () -> Void = {}
 
     @Environment(\.typography) private var type
 
@@ -39,7 +41,7 @@ struct StatusFooter: View {
     @ViewBuilder
     private var trailing: some View {
         if let message {
-            chip(symbol: Symbols.serverProblem, title: message, tint: Palette.imminent, help: message, action: onReconnect)
+            chip(symbol: Symbols.serverProblem, title: message, tint: Palette.imminent, help: message, action: onMessage)
         } else if showsProblem, let problem = syncState.problem {
             chip(
                 symbol: problem.symbolName,

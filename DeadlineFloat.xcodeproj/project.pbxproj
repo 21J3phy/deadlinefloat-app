@@ -43,6 +43,7 @@
 		D96264BDC21C0F74031AB285 /* DrawerDetents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24FA44EB4EC842A39D89961 /* DrawerDetents.swift */; };
 		1A1193DD26C6A1E9BF115B32 /* DuplicateReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B5189396EA98B784034BD8 /* DuplicateReducer.swift */; };
 		D15D08F58CF83F57E6BEB074 /* EventColorResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1609AAAE6D3B87F636E4FE31 /* EventColorResolver.swift */; };
+		BF8573560F67F9B3341367E0 /* EventEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CD1CF4EE42E2857E5523D10 /* EventEdit.swift */; };
 		DDB8B3A6D6ED29E27DB5EF1C /* GoogleDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D99BB9E4F265EE0AC147D716 /* GoogleDate.swift */; };
 		A1CF236278D7447044472094 /* GooglePalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C22273C04CF4F2F15C4DE7 /* GooglePalette.swift */; };
 		342C766FB3DEBEB0457025D5 /* RulerSpan.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24A090083F4BF57F46C3B4D /* RulerSpan.swift */; };
@@ -50,6 +51,7 @@
 		134D1BE1CA59A910E821E149 /* SwipeRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E96B15C506E6F531985ADF0 /* SwipeRecognizer.swift */; };
 		101B9DA6C3DF9F5684A30FDB /* TimelineLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094F9B2C2CDCAE4F1719AE4E /* TimelineLayout.swift */; };
 		1C61CD733899A5DAD9C66E9D /* CalendarEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33286B20CB17C718CCE3D536 /* CalendarEvents.swift */; };
+		0EB47BBEE922419B404E6BF8 /* DaySpan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76D1D831C42B9F772309B9 /* DaySpan.swift */; };
 		5B4F7721A710D3B76ADFFBE1 /* Deadline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172754D7AFBFB55C773E0FDF /* Deadline.swift */; };
 		AF934BC59B69C9038DB25C71 /* DeadlineSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBEB8C8CB86EAC770626094B /* DeadlineSection.swift */; };
 		E510AE83267C45AE635BEAF5 /* GoogleCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE68E43B8FE78033B54A3757 /* GoogleCalendarModels.swift */; };
@@ -105,7 +107,9 @@
 		576A99E4728A8FF24C2216B2 /* DeadlineBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB97BD5E46E19FF28B25D1D /* DeadlineBuilderTests.swift */; };
 		F4740C0FBA162DAF0BCCD1EB /* DeadlineDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05993B05CFBF71F800A29DE /* DeadlineDetectorTests.swift */; };
 		951AC57D43D218A8546EC523 /* DuplicateReducerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0073C37B80D5EE8D4A126CC /* DuplicateReducerTests.swift */; };
+		72FA7A2C77BB84244D2AA8AA /* EdgeBarPillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFC6C2422AFC090A385F04FE /* EdgeBarPillTests.swift */; };
 		E7F74E4CE5B2DF77975DC81B /* EventColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF04D0BA3D26EA04140B458 /* EventColorTests.swift */; };
+		74E561089DF3EA6B1CFA7B10 /* EventEditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAF9A001132ED5C0DE0FDAF /* EventEditTests.swift */; };
 		6C25EE811A9611DD64E76622 /* GoogleClientConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26883DE305124E55491D3AD1 /* GoogleClientConfigTests.swift */; };
 		F94F40B82CEA9914CDDE1449 /* GoogleDateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654CEF085A42357664B1D615 /* GoogleDateTests.swift */; };
 		C4EF9E3A4989F030176E8667 /* GoogleDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43E4DE5EFDB808F7E11CD63A /* GoogleDecodingTests.swift */; };
@@ -171,6 +175,7 @@
 		E24FA44EB4EC842A39D89961 /* DrawerDetents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawerDetents.swift; sourceTree = "<group>"; };
 		B6B5189396EA98B784034BD8 /* DuplicateReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateReducer.swift; sourceTree = "<group>"; };
 		1609AAAE6D3B87F636E4FE31 /* EventColorResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventColorResolver.swift; sourceTree = "<group>"; };
+		7CD1CF4EE42E2857E5523D10 /* EventEdit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventEdit.swift; sourceTree = "<group>"; };
 		D99BB9E4F265EE0AC147D716 /* GoogleDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleDate.swift; sourceTree = "<group>"; };
 		39C22273C04CF4F2F15C4DE7 /* GooglePalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GooglePalette.swift; sourceTree = "<group>"; };
 		E24A090083F4BF57F46C3B4D /* RulerSpan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulerSpan.swift; sourceTree = "<group>"; };
@@ -178,6 +183,7 @@
 		7E96B15C506E6F531985ADF0 /* SwipeRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRecognizer.swift; sourceTree = "<group>"; };
 		094F9B2C2CDCAE4F1719AE4E /* TimelineLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineLayout.swift; sourceTree = "<group>"; };
 		33286B20CB17C718CCE3D536 /* CalendarEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvents.swift; sourceTree = "<group>"; };
+		3C76D1D831C42B9F772309B9 /* DaySpan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySpan.swift; sourceTree = "<group>"; };
 		172754D7AFBFB55C773E0FDF /* Deadline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deadline.swift; sourceTree = "<group>"; };
 		CBEB8C8CB86EAC770626094B /* DeadlineSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineSection.swift; sourceTree = "<group>"; };
 		CE68E43B8FE78033B54A3757 /* GoogleCalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleCalendarModels.swift; sourceTree = "<group>"; };
@@ -233,7 +239,9 @@
 		4BB97BD5E46E19FF28B25D1D /* DeadlineBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineBuilderTests.swift; sourceTree = "<group>"; };
 		C05993B05CFBF71F800A29DE /* DeadlineDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineDetectorTests.swift; sourceTree = "<group>"; };
 		B0073C37B80D5EE8D4A126CC /* DuplicateReducerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateReducerTests.swift; sourceTree = "<group>"; };
+		DFC6C2422AFC090A385F04FE /* EdgeBarPillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeBarPillTests.swift; sourceTree = "<group>"; };
 		1AF04D0BA3D26EA04140B458 /* EventColorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventColorTests.swift; sourceTree = "<group>"; };
+		4AAF9A001132ED5C0DE0FDAF /* EventEditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventEditTests.swift; sourceTree = "<group>"; };
 		26883DE305124E55491D3AD1 /* GoogleClientConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleClientConfigTests.swift; sourceTree = "<group>"; };
 		654CEF085A42357664B1D615 /* GoogleDateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleDateTests.swift; sourceTree = "<group>"; };
 		43E4DE5EFDB808F7E11CD63A /* GoogleDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleDecodingTests.swift; sourceTree = "<group>"; };
@@ -319,6 +327,7 @@
 				E24FA44EB4EC842A39D89961 /* DrawerDetents.swift */,
 				B6B5189396EA98B784034BD8 /* DuplicateReducer.swift */,
 				1609AAAE6D3B87F636E4FE31 /* EventColorResolver.swift */,
+				7CD1CF4EE42E2857E5523D10 /* EventEdit.swift */,
 				D99BB9E4F265EE0AC147D716 /* GoogleDate.swift */,
 				39C22273C04CF4F2F15C4DE7 /* GooglePalette.swift */,
 				E24A090083F4BF57F46C3B4D /* RulerSpan.swift */,
@@ -333,6 +342,7 @@
 			isa = PBXGroup;
 			children = (
 				33286B20CB17C718CCE3D536 /* CalendarEvents.swift */,
+				3C76D1D831C42B9F772309B9 /* DaySpan.swift */,
 				172754D7AFBFB55C773E0FDF /* Deadline.swift */,
 				CBEB8C8CB86EAC770626094B /* DeadlineSection.swift */,
 				CE68E43B8FE78033B54A3757 /* GoogleCalendarModels.swift */,
@@ -456,7 +466,9 @@
 				4BB97BD5E46E19FF28B25D1D /* DeadlineBuilderTests.swift */,
 				C05993B05CFBF71F800A29DE /* DeadlineDetectorTests.swift */,
 				B0073C37B80D5EE8D4A126CC /* DuplicateReducerTests.swift */,
+				DFC6C2422AFC090A385F04FE /* EdgeBarPillTests.swift */,
 				1AF04D0BA3D26EA04140B458 /* EventColorTests.swift */,
+				4AAF9A001132ED5C0DE0FDAF /* EventEditTests.swift */,
 				26883DE305124E55491D3AD1 /* GoogleClientConfigTests.swift */,
 				654CEF085A42357664B1D615 /* GoogleDateTests.swift */,
 				43E4DE5EFDB808F7E11CD63A /* GoogleDecodingTests.swift */,
@@ -626,6 +638,7 @@
 				D96264BDC21C0F74031AB285 /* DrawerDetents.swift in Sources */,
 				1A1193DD26C6A1E9BF115B32 /* DuplicateReducer.swift in Sources */,
 				D15D08F58CF83F57E6BEB074 /* EventColorResolver.swift in Sources */,
+				BF8573560F67F9B3341367E0 /* EventEdit.swift in Sources */,
 				DDB8B3A6D6ED29E27DB5EF1C /* GoogleDate.swift in Sources */,
 				A1CF236278D7447044472094 /* GooglePalette.swift in Sources */,
 				342C766FB3DEBEB0457025D5 /* RulerSpan.swift in Sources */,
@@ -633,6 +646,7 @@
 				134D1BE1CA59A910E821E149 /* SwipeRecognizer.swift in Sources */,
 				101B9DA6C3DF9F5684A30FDB /* TimelineLayout.swift in Sources */,
 				1C61CD733899A5DAD9C66E9D /* CalendarEvents.swift in Sources */,
+				0EB47BBEE922419B404E6BF8 /* DaySpan.swift in Sources */,
 				5B4F7721A710D3B76ADFFBE1 /* Deadline.swift in Sources */,
 				AF934BC59B69C9038DB25C71 /* DeadlineSection.swift in Sources */,
 				E510AE83267C45AE635BEAF5 /* GoogleCalendarModels.swift in Sources */,
@@ -695,7 +709,9 @@
 				576A99E4728A8FF24C2216B2 /* DeadlineBuilderTests.swift in Sources */,
 				F4740C0FBA162DAF0BCCD1EB /* DeadlineDetectorTests.swift in Sources */,
 				951AC57D43D218A8546EC523 /* DuplicateReducerTests.swift in Sources */,
+				72FA7A2C77BB84244D2AA8AA /* EdgeBarPillTests.swift in Sources */,
 				E7F74E4CE5B2DF77975DC81B /* EventColorTests.swift in Sources */,
+				74E561089DF3EA6B1CFA7B10 /* EventEditTests.swift in Sources */,
 				6C25EE811A9611DD64E76622 /* GoogleClientConfigTests.swift in Sources */,
 				F94F40B82CEA9914CDDE1449 /* GoogleDateTests.swift in Sources */,
 				C4EF9E3A4989F030176E8667 /* GoogleDecodingTests.swift in Sources */,

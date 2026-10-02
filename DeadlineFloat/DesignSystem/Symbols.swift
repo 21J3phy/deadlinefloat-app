@@ -60,6 +60,8 @@ enum Symbols {
     static let chevronRight = "chevron.right"
     static let safari = "safari"
     static let lock = "lock.fill"
+    static let undo = "arrow.uturn.backward"
+    static let editing = "hand.draw"
 
     static let all: [String] = [
         appMark, refresh, settings, hide, pin, pinned,
@@ -68,6 +70,6 @@ enum Symbols {
         offline, rateLimited, expiredAuth, notSignedIn, serverProblem, allClear, empty, stale,
         general, appearance, calendars, keywords, account, about,
         add, remove, reset, textSize, opacity, launchAtLogin, link,
-        spotlight, menuBar, chevronDown, chevronRight, safari, lock
+        spotlight, menuBar, chevronDown, chevronRight, safari, lock, undo, editing
     ]
 }

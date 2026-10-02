@@ -34,12 +34,12 @@ final class HTTPClientTests: XCTestCase {
         XCTAssertThrowsError(try client.validate(request("http://www.googleapis.com/calendar/v3/colors")))
     }
 
-    func testCalendarAPIAcceptsOnlyGET() {
+    func testCalendarAPIRefusesEveryWriteButAnEventPatch() {
         let client = HTTPClient.testing(transport: FakeTransport(status: 200, json: "{}"))
         for method in ["POST", "PUT", "PATCH", "DELETE"] {
             XCTAssertThrowsError(
                 try client.validate(request("https://www.googleapis.com/calendar/v3/calendars/x/events", method: method)),
-                "\(method) must be refused"
+                "\(method) on the event list must be refused"
             ) { error in
                 guard case APIError.disallowedRequest(let detail) = error else {
                     return XCTFail("expected disallowedRequest, got \(error)")
@@ -47,6 +47,54 @@ final class HTTPClientTests: XCTestCase {
                 XCTAssertTrue(detail.contains(method), detail)
             }
         }
+    }
+
+    func testOneEventMayBePatched() {
+        let client = HTTPClient.testing(transport: FakeTransport(status: 200, json: "{}"))
+        XCTAssertNoThrow(try client.validate(
+            request("https://www.googleapis.com/calendar/v3/calendars/primary%40example.com/events/e1", method: "PATCH")
+        ))
+    }
+
+    func testTheEventPatchIsTheOnlyWriteThatFits() {
+        let client = HTTPClient.testing(transport: FakeTransport(status: 200, json: "{}"))
+
+        // An event's own URL, but the wrong verb.
+        for method in ["POST", "PUT", "DELETE"] {
+            XCTAssertThrowsError(
+                try client.validate(request("https://www.googleapis.com/calendar/v3/calendars/x/events/e1", method: method)),
+                "\(method) on one event must be refused"
+            )
+        }
+
+        // A PATCH, but not at an event's own URL.
+        for path in [
+            "/calendar/v3/calendars/x",
+            "/calendar/v3/users/me/calendarList/x",
+            "/calendar/v3/calendars/x/acl/rule1",
+            "/calendar/v3/calendars/x/events/e1/instances",
+            "/calendar/v3/colors"
+        ] {
+            XCTAssertThrowsError(
+                try client.validate(request("https://www.googleapis.com\(path)", method: "PATCH")),
+                "PATCH \(path) must be refused"
+            )
+        }
+    }
+
+    func testTheWriteGuardIsDecidedOnTheShapeOfThePath() {
+        XCTAssertTrue(HTTPClient.isPermitted(
+            method: "patch",
+            url: URL(string: "https://www.googleapis.com/calendar/v3/calendars/a%40b.com/events/e1?sendUpdates=none")!
+        ), "a percent-encoded calendar id is still one path component")
+        XCTAssertTrue(HTTPClient.isPermitted(
+            method: "GET",
+            url: URL(string: "https://www.googleapis.com/calendar/v3/anything/at/all")!
+        ))
+        XCTAssertFalse(HTTPClient.isPermitted(
+            method: "DELETE",
+            url: URL(string: "https://www.googleapis.com/calendar/v3/calendars/x/events/e1")!
+        ))
     }
 
     func testTokenEndpointMayBePosted() {

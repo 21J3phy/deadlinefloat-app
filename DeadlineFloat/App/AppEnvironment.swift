@@ -28,6 +28,9 @@ final class AppEnvironment {
         }
 
         let preferences = Preferences(defaults: resolvedDefaults)
+        // A demo shows the whole app, dragging included; there is no account
+        // behind it, so the moves go no further than the window.
+        if isDemo { preferences.allowsEventEditing = true }
         self.preferences = preferences
 
         // Demo runs never touch the real keychain or the real cache file.

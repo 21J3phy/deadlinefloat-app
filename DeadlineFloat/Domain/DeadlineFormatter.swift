@@ -68,6 +68,17 @@ struct DeadlineFormatter: Sendable {
 
     func time(_ date: Date) -> String { date.formatted(timeStyle) }
 
+    /// `2:30 – 3:45 PM`, for a block being dragged. The first time drops its
+    /// meridiem when both halves share one, the way a calendar writes it.
+    func rangeText(from: Date, to: Date) -> String {
+        let start = from.formatted(timeStyle)
+        let end = to.formatted(timeStyle)
+        for suffix in [" AM", " PM"] where start.hasSuffix(suffix) && end.hasSuffix(suffix) {
+            return "\(start.dropLast(suffix.count)) – \(end)"
+        }
+        return "\(start) – \(end)"
+    }
+
     // MARK: - Sections
 
     /// `Wednesday, September 2`
@@ -93,6 +104,30 @@ struct DeadlineFormatter: Sendable {
     /// `9 AM`, `12 PM` — or `09`, `12` where the locale uses 24-hour time.
     func hourLabel(_ date: Date) -> String {
         date.formatted(baseStyle.hour(.defaultDigits(amPM: .abbreviated)))
+    }
+
+    /// The same label for an hour of the clock rather than an instant, for the
+    /// settings that choose where the ruler starts and ends. Midnight is drawn
+    /// as a word: `12 AM` on its own reads as noon to about half of everyone.
+    func hourLabel(hour: Int) -> String {
+        switch hour {
+        case 0: return "Midnight"
+        case 12: return "Noon"
+        default: break
+        }
+        let midnight = calendar.startOfDay(for: Date(timeIntervalSinceReferenceDate: 0))
+        guard let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: midnight) else { return "\(hour)" }
+        return hourLabel(date)
+    }
+
+    /// `The whole day`, `7 AM to 1 AM`, `8 AM to midnight` — what a `DaySpan`
+    /// shows. Only the two word-hours lowercase mid-sentence; `1 am` would be
+    /// a typo.
+    func spanLabel(_ span: DaySpan) -> String {
+        guard !span.isWholeDay else { return "The whole day" }
+        let end = hourLabel(hour: span.endHour)
+        let tail = (span.endHour == 0 || span.endHour == 12) ? end.lowercased() : end
+        return "\(hourLabel(hour: span.startHour)) to \(tail)"
     }
 
     // MARK: - Spotlight
