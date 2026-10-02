@@ -46,6 +46,7 @@ final class EdgeBarPanel: NSPanel {
 final class HoverContainerView: NSView {
     var onEnter: (() -> Void)?
     var onExit: (() -> Void)?
+    var onMove: (() -> Void)?
     var onClick: (() -> Void)?
 
     private var trackingArea: NSTrackingArea?
@@ -55,7 +56,7 @@ final class HoverContainerView: NSView {
         if let trackingArea { removeTrackingArea(trackingArea) }
         let area = NSTrackingArea(
             rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect, .enabledDuringMouseDrag],
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect, .enabledDuringMouseDrag],
             owner: self,
             userInfo: nil
         )
@@ -65,6 +66,7 @@ final class HoverContainerView: NSView {
 
     override func mouseEntered(with event: NSEvent) { onEnter?() }
     override func mouseExited(with event: NSEvent) { onExit?() }
+    override func mouseMoved(with event: NSEvent) { onMove?() }
 
     override func mouseDown(with event: NSEvent) {
         onClick?()

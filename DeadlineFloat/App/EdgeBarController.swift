@@ -7,13 +7,16 @@ import SwiftUI
 ///
 /// Two windows, both docked to the edge. The bar window is exactly the
 /// sliver's width when collapsed, so the rest of the screen stays clickable;
-/// the pill is its own small window beside the sliver. Resting the pointer on
-/// either for a moment slides the bar out; leaving it, unless pinned, slides
-/// it back after a short grace.
+/// the pill is its own small window beside the sliver. Pressing the pointer
+/// against the screen's edge for a moment slides the bar out, as does a click
+/// on the sliver or the pill; leaving it, unless pinned, slides it back after
+/// a short grace.
 @MainActor
 final class EdgeBarController: NSObject, NSWindowDelegate {
     static let dwellDelay: Duration = .milliseconds(250)
     static let collapseGrace: Duration = .milliseconds(350)
+    /// How close to the screen's outer edge the pointer must be to open the bar.
+    static let edgeReach: CGFloat = 2
 
     let displayID: CGDirectDisplayID
     let state = EdgeBarState()
@@ -97,6 +100,7 @@ final class EdgeBarController: NSObject, NSWindowDelegate {
 
         container.onEnter = { [weak self] in self?.pointerEntered() }
         container.onExit = { [weak self] in self?.pointerExited() }
+        container.onMove = { [weak self] in self?.pointerMoved() }
         container.onClick = { [weak self] in
             guard let self, !self.state.isExpanded else { return }
             self.expand(pinned: true)
@@ -114,7 +118,7 @@ final class EdgeBarController: NSObject, NSWindowDelegate {
     }
 
     func invalidate() {
-        dwellTask?.cancel()
+        cancelDwell()
         collapseTask?.cancel()
         removeClickMonitors()
         swipeMonitor.uninstall()
@@ -176,7 +180,7 @@ final class EdgeBarController: NSObject, NSWindowDelegate {
     // MARK: - Expansion
 
     func expand(pinned: Bool) {
-        dwellTask?.cancel()
+        cancelDwell()
         collapseTask?.cancel()
         settleTask?.cancel()
         isSettling = false
@@ -193,7 +197,7 @@ final class EdgeBarController: NSObject, NSWindowDelegate {
     }
 
     func collapse(animated: Bool = true) {
-        dwellTask?.cancel()
+        cancelDwell()
         collapseTask?.cancel()
         settleTask?.cancel()
         state.isPinned = false
@@ -254,19 +258,45 @@ final class EdgeBarController: NSObject, NSWindowDelegate {
     private func pointerEntered() {
         isPointerInside = true
         collapseTask?.cancel()
-        guard !state.isExpanded else { return }
-        dwellTask?.cancel()
+        pointerMoved()
+    }
+
+    /// Hovering opens the bar only with the pointer pressed against the
+    /// screen's edge. Anywhere else over the window does nothing — and while
+    /// the sheet shrinks back the window is still panel-wide, so without this
+    /// heading back across the screen caught the pointer and reopened it.
+    private func pointerMoved() {
+        guard !state.isExpanded, isPointerInside, isPointerAtEdge else {
+            cancelDwell()
+            return
+        }
+        guard dwellTask == nil else { return }
         dwellTask = Task { [weak self] in
             try? await Task.sleep(for: Self.dwellDelay)
-            guard let self, !Task.isCancelled, self.isPointerInside else { return }
+            guard let self, !Task.isCancelled else { return }
+            self.dwellTask = nil
+            guard self.isPointerInside, self.isPointerAtEdge else { return }
             self.expand(pinned: false)
         }
     }
 
     private func pointerExited() {
         isPointerInside = false
-        dwellTask?.cancel()
+        cancelDwell()
         scheduleCollapse()
+    }
+
+    private func cancelDwell() {
+        dwellTask?.cancel()
+        dwellTask = nil
+    }
+
+    private var isPointerAtEdge: Bool {
+        guard let screen else { return false }
+        let x = NSEvent.mouseLocation.x
+        return state.edge == .right
+            ? x >= screen.frame.maxX - Self.edgeReach
+            : x <= screen.frame.minX + Self.edgeReach
     }
 
     private func scheduleCollapse() {
