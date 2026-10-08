@@ -1,6 +1,6 @@
 # DeadlineFloat — Privacy Policy
 
-_Last updated: 21 September 2026_
+_Last updated: 8 October 2026_
 
 DeadlineFloat is a macOS application that displays your upcoming Google Calendar
 deadlines in a floating window. This policy describes exactly what it does with
@@ -16,6 +16,14 @@ DeadlineFloat runs entirely on your Mac. It reads your calendars from Google and
 displays them. If you turn on *Moving events*, it can also change when one of
 your events starts and ends — nothing else. It sends nothing anywhere but
 Google. There is no server, no account, no analytics and no telemetry.
+
+## On-device task detection
+
+On supported Macs, Apple Intelligence classifies event titles, descriptions and
+calendar names to identify unfinished tasks. Classification runs locally using
+Apple's on-device model. This content is not sent to a cloud AI service.
+Classification results are cached in memory; completing a task remains a local
+preference and does not modify its Google Calendar event.
 
 ## What it accesses
 

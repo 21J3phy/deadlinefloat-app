@@ -74,8 +74,12 @@ struct CalendarView: View {
             }
             .frame(width: proxy.size.width, height: height, alignment: .topLeading)
         }
+        .coordinateSpace(name: "calendarGrid")
         .frame(width: Metrics.calendarWidth(for: range))
         .clipped()
+        .transaction { transaction in
+            if drag != nil { transaction.disablesAnimations = true }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Calendar, \(days.count) day\(days.count == 1 ? "" : "s")")
     }
@@ -299,7 +303,7 @@ struct CalendarView: View {
                         width: max(0, blockWidth),
                         height: max(Metrics.calendarBlockMinimumHeight - 2, bottom - top - 2)
                     )
-                    let lifted = drag?.id == item.id ? drag : nil
+                    let lifted = drag?.id == item.id && drag?.originDay == index ? drag : nil
                     let segment = stretches && lifted == nil
                         ? sliverSegment(for: item, ruler: ruler, columnIndex: index, gridHeight: gridHeight)
                         : nil
@@ -315,11 +319,12 @@ struct CalendarView: View {
                         formatter: formatter,
                         isCompact: (lifted == nil ? settled.height : frame.height) < 38,
                         height: frame.height,
+                        gestureOriginY: frame.minY,
                         morph: isToday ? morph : 1,
                         stripTitle: showsSliverTitles && (segment?.height ?? 0) >= SliverTitle.minimumLength ? segment : nil,
                         stripEdge: screenSide == .trailing ? .right : .left,
                         dragTime: lifted.map { formatter.rangeText(from: $0.proposal.start, to: $0.proposal.end) },
-                        editing: editing(for: item, index: index, gridHeight: gridHeight),
+                        editing: editing(for: item, index: index, gridHeight: gridHeight, frame: settled),
                         canUndoMove: canEdit && undoableID == item.id,
                         onUndoMove: onUndoMove,
                         onOpen: { onOpen(item) },
@@ -356,29 +361,25 @@ struct CalendarView: View {
         var originDay: Int
         var targetDay: Int
         var proposal: EventEdit.Proposal
+        var originFrame: CGRect
+        var translation: CGSize = .zero
     }
 
-    /// Where a dragged block is drawn: the full width of the column it is
-    /// over, at the time it is proposing, clear of the layout the settled
-    /// blocks share so nothing shuffles underneath the pointer.
+    /// Keep the original overlap lane and follow the pointer continuously.
+    /// Only the proposal/commit snaps to time; preview geometry never feeds
+    /// back into the gesture's stationary calendar coordinate space.
     private func draggedFrame(_ drag: BlockDrag, gridHeight: CGFloat) -> CGRect {
-        guard let target = columnRuler(drag.targetDay) else { return .zero }
-        let top = y(fraction: target.fraction(of: drag.proposal.start), gridHeight: gridHeight)
-        let bottom = y(fraction: target.fraction(of: drag.proposal.end), gridHeight: gridHeight)
-        return CGRect(
-            x: 4 + CGFloat(drag.targetDay - drag.originDay) * columnWidth,
-            y: top + 1,
-            width: max(0, columnWidth - 8),
-            height: max(Metrics.calendarBlockMinimumHeight - 2, bottom - top - 2)
-        )
+        EventEdit.previewFrame(origin: drag.originFrame, mode: drag.mode,
+                               translation: drag.translation,
+                               minimumHeight: Metrics.calendarBlockMinimumHeight)
     }
 
     /// What this block does when it is dragged, or `nil` when there is
     /// nothing to drag: editing off, or an item with no length to change.
-    private func editing(for item: Deadline, index: Int, gridHeight: CGFloat) -> BlockEditing? {
+    private func editing(for item: Deadline, index: Int, gridHeight: CGFloat, frame: CGRect) -> BlockEditing? {
         guard canEdit, EventEdit.isEditable(item) else { return nil }
         return BlockEditing(
-            began: { mode in begin(item, mode: mode, index: index) },
+            began: { mode in begin(item, mode: mode, index: index, frame: frame) },
             changed: { translation in
                 update(item, translation: translation, index: index, gridHeight: gridHeight)
             },
@@ -388,14 +389,15 @@ struct CalendarView: View {
         )
     }
 
-    private func begin(_ item: Deadline, mode: EventEdit.Mode, index: Int) {
+    private func begin(_ item: Deadline, mode: EventEdit.Mode, index: Int, frame: CGRect) {
         guard case .timed(let start, let end) = item.timing, let end else { return }
         drag = BlockDrag(
             id: item.id,
             mode: mode,
             originDay: index,
             targetDay: index,
-            proposal: EventEdit.Proposal(start: start, end: end)
+            proposal: EventEdit.Proposal(start: start, end: end),
+            originFrame: frame
         )
     }
 
@@ -411,6 +413,7 @@ struct CalendarView: View {
         let target = clampedColumn(index + shift)
         guard let landing = columnRuler(target) else { return }
 
+        current.translation = translation
         current.targetDay = target
         current.proposal = EventEdit.propose(
             mode: current.mode,
@@ -423,7 +426,9 @@ struct CalendarView: View {
             fine: NSEvent.modifierFlags.contains(.option),
             calendar: calendar
         )
-        drag = current
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { drag = current }
     }
 
     /// A column index that is certainly on the calendar. A drag holds the
@@ -513,6 +518,7 @@ struct CalendarBlock: View {
     /// The height the calendar has drawn this block at, which decides where
     /// its resize edges are.
     var height: CGFloat = 0
+    var gestureOriginY: CGFloat = 0
     /// How far this block has stretched out of the sliver: at 0 it is drawn
     /// exactly as its segment there, at 1 as itself. Only today's blocks
     /// ever have less than 1.
@@ -585,18 +591,22 @@ struct CalendarBlock: View {
             .contentShape(shape)
             .gesture(press)
             .onContinuousHover { phase in
-                guard case .active(let point) = phase else { return }
+                guard activeMode == nil, case .active(let point) = phase else { return }
                 pointerZone = zone(at: point.y)
                 apply(cursor: cursor(for: pointerZone))
             }
             .opacity(MorphGeometry.mix(segmentOpacity, isCompleted ? 0.45 : 1, morph))
             .animation(Motion.quick, value: isLit)
             .onHover { hovering in
+                guard activeMode == nil else { return }
                 isPointerOver = hovering
                 onHover(hovering)
                 if !hovering { apply(cursor: nil) }
             }
-            .onDisappear { apply(cursor: nil) }
+            .onDisappear {
+                apply(cursor: nil)
+                if activeMode != nil { editing?.cancelled(); activeMode = nil }
+            }
             .contextMenu {
                 if canUndoMove {
                     Button(action: onUndoMove) { Label("Undo Move", systemImage: Symbols.undo) }
@@ -714,13 +724,13 @@ struct CalendarBlock: View {
     /// what makes a click on a draggable block reliable — two competing
     /// gestures would sometimes fire both.
     private var press: some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarGrid"))
             .onChanged { value in
                 guard let editing else { return }
                 if activeMode == nil {
                     let travelled = max(abs(value.translation.width), abs(value.translation.height))
                     guard travelled > Self.clickSlop else { return }
-                    let mode = self.mode(at: value.startLocation.y)
+                    let mode = self.mode(at: value.startLocation.y - gestureOriginY)
                     activeMode = mode
                     apply(cursor: .closedHand)
                     editing.began(mode)
@@ -729,19 +739,14 @@ struct CalendarBlock: View {
             }
             .onEnded { value in
                 if activeMode != nil {
+                    editing?.changed(value.translation)
                     activeMode = nil
                     apply(cursor: cursor(for: pointerZone))
                     editing?.ended()
-                } else if isInside(value.location) {
+                } else if max(abs(value.translation.width), abs(value.translation.height)) <= Self.clickSlop {
                     onOpen()
                 }
             }
-    }
-
-    /// A release outside the block is a press that went nowhere and changed
-    /// its mind, not a click on the event.
-    private func isInside(_ point: CGPoint) -> Bool {
-        point.y >= -2 && point.y <= height + 2
     }
 
     private func mode(at y: CGFloat) -> EventEdit.Mode {
