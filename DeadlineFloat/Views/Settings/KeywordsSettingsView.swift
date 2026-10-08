@@ -9,29 +9,9 @@ struct KeywordsSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             SettingsCard(title: "Matching") {
-                SettingsRow(
-                    title: "Show all calendar events",
-                    subtitle: "Ignores the include list. Excluded keywords still apply."
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { preferences.showAllEvents },
-                        set: { preferences.showAllEvents = $0; viewModel.filterChanged() }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.glassSwitch)
-                }
-                SettingsSeparator()
-                SettingsRow(
-                    title: "Match whole words only",
-                    subtitle: "Keeps “due” from matching “residue”."
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { preferences.filter.matchWholeWordsOnly },
-                        set: { preferences.filter.matchWholeWordsOnly = $0; viewModel.filterChanged() }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.glassSwitch)
-                }
+                Text("Apple Intelligence detects unfinished tasks on this Mac. Meetings and other calendar events stay on the calendar. Unclassified events stay out of the task list.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                 SettingsSeparator()
                 SettingsRow(title: "Hide events you have declined") {
                     Toggle("", isOn: Binding(
@@ -44,18 +24,8 @@ struct KeywordsSettingsView: View {
             }
 
             ruleEditor(
-                title: "Treat as a deadline",
-                footnote: "Matching ignores capitals, accents and leading emoji, so “🔴 DUE: Lab 3” matches “Starts with DUE”.",
-                rules: Binding(
-                    get: { preferences.filter.includeRules },
-                    set: { preferences.filter.includeRules = $0; viewModel.filterChanged() }
-                ),
-                isDisabled: preferences.showAllEvents
-            )
-
-            ruleEditor(
                 title: "Never show",
-                footnote: "Exclusions win over everything, including “Show all calendar events”.",
+                footnote: "Excluded titles stay hidden from both the calendar and task list.",
                 rules: Binding(
                     get: { preferences.filter.excludeRules },
                     set: { preferences.filter.excludeRules = $0; viewModel.filterChanged() }

@@ -12,6 +12,28 @@ final class EventEditTests: XCTestCase {
         RulerSpan(day: Fixture.date(year, month, d), calendar: calendar)
     }
 
+    func testPointerPreviewPreservesNarrowOverlapLaneAndFractionalTravel() {
+        let origin = CGRect(x: 40, y: 100, width: 60, height: 50)
+        let frame = EventEdit.previewFrame(origin: origin, mode: .move,
+            translation: CGSize(width: 2.25, height: 0.5), minimumHeight: 20)
+        XCTAssertEqual(frame, CGRect(x: 42.25, y: 100.5, width: 60, height: 50))
+    }
+
+    func testResizePreviewKeepsOppositeEdgeAnchoredAndCannotInvert() {
+        let origin = CGRect(x: 40, y: 100, width: 60, height: 50)
+        let top = EventEdit.previewFrame(origin: origin, mode: .resizeStart,
+            translation: CGSize(width: 100, height: 80), minimumHeight: 20)
+        XCTAssertEqual(top, CGRect(x: 40, y: 130, width: 60, height: 20))
+        XCTAssertEqual(top.maxY, origin.maxY)
+        let bottom = EventEdit.previewFrame(origin: origin, mode: .resizeEnd,
+            translation: CGSize(width: 100, height: -80), minimumHeight: 20)
+        XCTAssertEqual(bottom, CGRect(x: 40, y: 100, width: 60, height: 20))
+        let fractional = EventEdit.previewFrame(origin: origin, mode: .resizeStart,
+            translation: CGSize(width: 0, height: -0.5), minimumHeight: 20)
+        XCTAssertEqual(fractional.minY, 99.5)
+        XCTAssertEqual(fractional.maxY, origin.maxY)
+    }
+
     // MARK: - Snapping
 
     func testTimesSnapToTheFiveMinuteGrid() {

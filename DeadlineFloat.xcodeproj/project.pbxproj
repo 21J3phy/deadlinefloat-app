@@ -61,6 +61,7 @@
 		9C72902BD319D00CAD6868E2 /* SyncState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12C9E22D0486BD2C7FD2715 /* SyncState.swift */; };
 		B041368D5CCC3669D0FCE241 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3B4A46A1619D24C07B42612 /* Preferences.swift */; };
 		E789C463ED8639C90E56BC05 /* CalendarRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A70BF70CA5881BC6393425 /* CalendarRepository.swift */; };
+		7A3143AEE28D0AC05B7D08D4 /* EventTaskClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A5E3E1E78A0360E9B048BE9 /* EventTaskClassifier.swift */; };
 		A46D220C27FC2455AA2A424C /* GoogleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD901D9AD60962591FDA8DFB /* GoogleAuthService.swift */; };
 		86F9EE2DAD3A6814A153B6E2 /* GoogleCalendarClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF205C18EF371B6F978A239C /* GoogleCalendarClient.swift */; };
 		C630A7D7F2F6CB5A5E960472 /* GoogleClientConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7776DABAB5E1999B7FCC9538 /* GoogleClientConfig.swift */; };
@@ -122,6 +123,7 @@
 		9274CF5535C183997F96DF72 /* RulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 517EEBA6F56F593968781465 /* RulerTests.swift */; };
 		5058AA9C9F43BF4749529464 /* SpotlightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5297575323CD995A99290EC /* SpotlightTests.swift */; };
 		5F6019F9E8DDC16A1696292D /* SymbolAvailabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52D094856E02CCDB08BCA98E /* SymbolAvailabilityTests.swift */; };
+		319A8BF4A1452186C429D7E1 /* TaskClassificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E0ECF5038116D0E51FBDBB /* TaskClassificationTests.swift */; };
 		589518B8D968B6B99570D798 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D1CB32C6717E5A4958199E /* TestSupport.swift */; };
 /* End PBXBuildFile section */
 
@@ -193,6 +195,7 @@
 		C12C9E22D0486BD2C7FD2715 /* SyncState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncState.swift; sourceTree = "<group>"; };
 		F3B4A46A1619D24C07B42612 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		87A70BF70CA5881BC6393425 /* CalendarRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarRepository.swift; sourceTree = "<group>"; };
+		8A5E3E1E78A0360E9B048BE9 /* EventTaskClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTaskClassifier.swift; sourceTree = "<group>"; };
 		DD901D9AD60962591FDA8DFB /* GoogleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthService.swift; sourceTree = "<group>"; };
 		CF205C18EF371B6F978A239C /* GoogleCalendarClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleCalendarClient.swift; sourceTree = "<group>"; };
 		7776DABAB5E1999B7FCC9538 /* GoogleClientConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleClientConfig.swift; sourceTree = "<group>"; };
@@ -254,6 +257,7 @@
 		517EEBA6F56F593968781465 /* RulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulerTests.swift; sourceTree = "<group>"; };
 		B5297575323CD995A99290EC /* SpotlightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightTests.swift; sourceTree = "<group>"; };
 		52D094856E02CCDB08BCA98E /* SymbolAvailabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymbolAvailabilityTests.swift; sourceTree = "<group>"; };
+		E5E0ECF5038116D0E51FBDBB /* TaskClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskClassificationTests.swift; sourceTree = "<group>"; };
 		40D1CB32C6717E5A4958199E /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -366,6 +370,7 @@
 			isa = PBXGroup;
 			children = (
 				87A70BF70CA5881BC6393425 /* CalendarRepository.swift */,
+				8A5E3E1E78A0360E9B048BE9 /* EventTaskClassifier.swift */,
 				DD901D9AD60962591FDA8DFB /* GoogleAuthService.swift */,
 				CF205C18EF371B6F978A239C /* GoogleCalendarClient.swift */,
 				7776DABAB5E1999B7FCC9538 /* GoogleClientConfig.swift */,
@@ -481,6 +486,7 @@
 				517EEBA6F56F593968781465 /* RulerTests.swift */,
 				B5297575323CD995A99290EC /* SpotlightTests.swift */,
 				52D094856E02CCDB08BCA98E /* SymbolAvailabilityTests.swift */,
+				E5E0ECF5038116D0E51FBDBB /* TaskClassificationTests.swift */,
 				40D1CB32C6717E5A4958199E /* TestSupport.swift */,
 			);
 			path = DeadlineFloatTests;
@@ -656,6 +662,7 @@
 				9C72902BD319D00CAD6868E2 /* SyncState.swift in Sources */,
 				B041368D5CCC3669D0FCE241 /* Preferences.swift in Sources */,
 				E789C463ED8639C90E56BC05 /* CalendarRepository.swift in Sources */,
+				7A3143AEE28D0AC05B7D08D4 /* EventTaskClassifier.swift in Sources */,
 				A46D220C27FC2455AA2A424C /* GoogleAuthService.swift in Sources */,
 				86F9EE2DAD3A6814A153B6E2 /* GoogleCalendarClient.swift in Sources */,
 				C630A7D7F2F6CB5A5E960472 /* GoogleClientConfig.swift in Sources */,
@@ -724,6 +731,7 @@
 				9274CF5535C183997F96DF72 /* RulerTests.swift in Sources */,
 				5058AA9C9F43BF4749529464 /* SpotlightTests.swift in Sources */,
 				5F6019F9E8DDC16A1696292D /* SymbolAvailabilityTests.swift in Sources */,
+				319A8BF4A1452186C429D7E1 /* TaskClassificationTests.swift in Sources */,
 				589518B8D968B6B99570D798 /* TestSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -851,14 +859,14 @@
 				CODE_SIGN_ENTITLEMENTS = DeadlineFloat/DeadlineFloat.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = GK2Z5G7FG9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Nirav Surabhi";
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.niravsurabhi.DeadlineFloat;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -874,14 +882,14 @@
 				CODE_SIGN_ENTITLEMENTS = DeadlineFloat/DeadlineFloat.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = GK2Z5G7FG9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Nirav Surabhi";
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.niravsurabhi.DeadlineFloat;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -894,10 +902,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = GK2Z5G7FG9;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.niravsurabhi.DeadlineFloatTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -911,10 +919,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = GK2Z5G7FG9;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.niravsurabhi.DeadlineFloatTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;

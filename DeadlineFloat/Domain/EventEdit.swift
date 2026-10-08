@@ -55,6 +55,24 @@ enum EventEdit {
         var duration: TimeInterval { end.timeIntervalSince(start) }
     }
 
+    /// Pointer preview preserves the overlap lane and the grabbed offset.
+    /// Its fractional pixel travel is independent of the snapped save time.
+    static func previewFrame(origin: CGRect, mode: Mode, translation: CGSize, minimumHeight: CGFloat) -> CGRect {
+        var frame = origin
+        switch mode {
+        case .move:
+            frame.origin.x += translation.width
+            frame.origin.y += translation.height
+        case .resizeStart:
+            let delta = min(translation.height, max(0, frame.height - minimumHeight))
+            frame.origin.y += delta
+            frame.size.height -= delta
+        case .resizeEnd:
+            frame.size.height = max(min(origin.height, minimumHeight), frame.height + translation.height)
+        }
+        return frame
+    }
+
     /// Where a drag puts an event.
     ///
     /// - Parameters:

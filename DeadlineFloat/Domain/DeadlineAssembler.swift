@@ -10,6 +10,8 @@ struct DeadlineAssembler: Sendable {
     var locale: Locale
     var configuration: FilterConfiguration
     var mergeDuplicates: Bool
+    /// When supplied, only positively classified tasks enter the task list.
+    var taskClassifications: [String: Bool]? = nil
 
     init(
         calendar: Calendar,
@@ -27,7 +29,9 @@ struct DeadlineAssembler: Sendable {
 
     func deadlines(from snapshot: CalendarSnapshot, selectedCalendarIDs: Set<String>?) -> [Deadline] {
         let resolver = EventColorResolver(palette: snapshot.palette)
-        let detector = DeadlineDetector(configuration: configuration)
+        var taskFilter = configuration
+        if taskClassifications != nil { taskFilter.showAllEvents = true }
+        let detector = DeadlineDetector(configuration: taskFilter)
         let builder = DeadlineBuilder(calendar: calendar, detector: detector, colorResolver: resolver)
 
         let included = snapshot.perCalendarEvents.filter { entry in
@@ -36,6 +40,9 @@ struct DeadlineAssembler: Sendable {
         }
 
         var deadlines = builder.build(events: included)
+        if let taskClassifications {
+            deadlines = deadlines.filter { taskClassifications[$0.id] == true }
+        }
 
         if mergeDuplicates {
             let priority = snapshot.calendars
@@ -86,7 +93,8 @@ struct DeadlineAssembler: Sendable {
             }
             .map { item in
                 var item = item
-                item.isDeadline = configuration.showAllEvents || detector.isDeadline(title: item.title)
+                item.isDeadline = taskClassifications.map { $0[item.id] == true }
+                    ?? (configuration.showAllEvents || detector.isDeadline(title: item.title))
                 return item
             }
             .sorted { lhs, rhs in

@@ -34,6 +34,14 @@ struct TaskPaneView: View {
                 onTogglePin: onTogglePin
             )
 
+            if let message = viewModel.taskDetectionMessage {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+            }
+
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .animation(reduceMotion ? nil : Motion.pane, value: contentState)
@@ -44,7 +52,7 @@ struct TaskPaneView: View {
                 now: viewModel.now,
                 totalCount: viewModel.totalCount,
                 overdueCount: viewModel.overdueCount,
-                showingAllEvents: preferences.showAllEvents,
+                showingAllEvents: false,
                 showsProblem: contentState != .signIn,
                 message: contentState == .signIn ? nil : viewModel.transientMessage,
                 onRetry: { viewModel.refresh() },
@@ -76,7 +84,7 @@ struct TaskPaneView: View {
 
         case .feed:
             DeadlineFeedView(
-                focus: viewModel.focus,
+                focus: viewModel.taskFocus,
                 showsFocus: preferences.showSpotlight,
                 sections: viewModel.sections,
                 completed: viewModel.completed,
@@ -84,7 +92,7 @@ struct TaskPaneView: View {
                 formatter: viewModel.formatter,
                 countdownFormatter: viewModel.countdownFormatter,
                 range: preferences.range,
-                showingAllEvents: preferences.showAllEvents,
+                showingAllEvents: false,
                 onOpen: { viewModel.open($0) },
                 onCopyLink: { viewModel.copyLink($0) },
                 onCopyTitle: { viewModel.copyTitle($0) },

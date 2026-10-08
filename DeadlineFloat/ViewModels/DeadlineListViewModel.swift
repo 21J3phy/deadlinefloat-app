@@ -25,6 +25,11 @@ final class DeadlineListViewModel {
 
     /// The event happening now, or the next one to start.
     private(set) var focus: ScheduleFocus?
+    private(set) var taskDetectionMessage: String?
+
+    var taskFocus: ScheduleFocus? {
+        ScheduleFocus.select(from: agenda.filter { $0.isDeadline && !completedIDs.contains($0.id) }, now: now)
+    }
 
     /// Ids of everything marked done, for the schedule and the strip.
     private(set) var completedIDs: Set<String> = []
@@ -63,6 +68,12 @@ final class DeadlineListViewModel {
     @ObservationIgnored private let clock: @Sendable () -> Date
     @ObservationIgnored private let isDemo: Bool
 
+    @ObservationIgnored private let taskClassifier = EventTaskClassifier()
+    @ObservationIgnored private var classificationTask: Task<Void, Never>?
+    @ObservationIgnored private var classificationInputs: [String: TaskClassificationInput] = [:]
+    @ObservationIgnored private var taskDecisions: [String: Bool] = [:]
+    @ObservationIgnored private var classificationGeneration = 0
+    @ObservationIgnored private var classificationRetryAfter = Date.distantPast
     @ObservationIgnored private var snapshot: CalendarSnapshot = .empty
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored private var refreshLoop: Task<Void, Never>?
@@ -102,6 +113,7 @@ final class DeadlineListViewModel {
     }
 
     deinit {
+        classificationTask?.cancel()
         refreshLoop?.cancel()
         tickTask?.cancel()
         refreshTask?.cancel()
@@ -134,6 +146,7 @@ final class DeadlineListViewModel {
     }
 
     func stop() {
+        classificationTask?.cancel()
         refreshLoop?.cancel()
         tickTask?.cancel()
         refreshTask?.cancel()
@@ -323,6 +336,11 @@ final class DeadlineListViewModel {
     }
 
     func signOut() async {
+        classificationGeneration += 1
+        classificationTask?.cancel()
+        classificationTask = nil
+        classificationInputs = [:]
+        taskDecisions = [:]
         await auth.signOut()
         await repository.clearCache()
         snapshot = .empty
@@ -556,11 +574,13 @@ final class DeadlineListViewModel {
     /// Re-derives the visible list from the in-memory snapshot. Cheap, pure, and
     /// the only place `sections` is assigned.
     func rebuild() {
-        let assembler = DeadlineAssembler(
+        updateTaskClassification()
+        var assembler = DeadlineAssembler(
             calendar: calendar,
             configuration: preferences.filter,
             mergeDuplicates: preferences.mergeDuplicates
         )
+        assembler.taskClassifications = taskDecisions
         let source = effectiveSnapshot
         let partition = assembler.partition(
             from: source,
@@ -581,6 +601,59 @@ final class DeadlineListViewModel {
         if focused != focus { focus = focused }
 
         scheduleTick()
+    }
+
+    /// Run inference outside the rendering/drag path, and reject answers for
+    /// a replaced snapshot. Unknown and failed entries never become task rows.
+    private func updateTaskClassification() {
+        var inputs: [String: TaskClassificationInput] = [:]
+        let detector = DeadlineDetector(configuration: preferences.filter)
+        for entry in snapshot.perCalendarEvents {
+            if let selected = preferences.selectedCalendarIDs, !selected.contains(entry.calendar.id) { continue }
+            for event in entry.events where !event.isCancelled {
+                if preferences.filter.hideDeclinedEvents && event.isDeclinedBySelf { continue }
+                if detector.isExcluded(title: event.summary ?? "") { continue }
+                inputs["\(entry.calendar.id)|\(event.id)"] = TaskClassificationInput(event: event, calendarName: entry.calendar.displayName)
+            }
+        }
+        if inputs != classificationInputs {
+            classificationGeneration += 1
+            classificationTask?.cancel()
+            classificationTask = nil
+            taskDecisions = taskDecisions.filter { inputs[$0.key] == classificationInputs[$0.key] }
+            classificationInputs = inputs
+            classificationRetryAfter = .distantPast
+        }
+        guard !inputs.isEmpty else { taskDetectionMessage = nil; return }
+        if let message = EventTaskClassifier.unavailableMessage {
+            taskDetectionMessage = message
+            return
+        }
+        guard classificationTask == nil, clock() >= classificationRetryAfter else { return }
+        let pending = inputs.filter { taskDecisions[$0.key] == nil }
+        guard !pending.isEmpty else { taskDetectionMessage = nil; return }
+        let generation = classificationGeneration
+        taskDetectionMessage = "Finding unfinished tasks with Apple Intelligence…"
+        classificationTask = Task { [weak self, taskClassifier] in
+            var failed = false
+            for (id, input) in pending.sorted(by: { $0.key < $1.key }) {
+                guard !Task.isCancelled else { return }
+                do {
+                    let decision = try await taskClassifier.classify(input)
+                    guard let self, !Task.isCancelled, self.classificationGeneration == generation else { return }
+                    self.taskDecisions[id] = decision
+                    self.rebuild()
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    failed = true
+                }
+            }
+            guard let self, self.classificationGeneration == generation else { return }
+            self.classificationTask = nil
+            self.classificationRetryAfter = self.clock().addingTimeInterval(failed ? 60 : 0)
+            self.taskDetectionMessage = failed ? "Some events could not be classified. Task detection will retry." : nil
+            self.rebuild()
+        }
     }
 
     // MARK: Clock
